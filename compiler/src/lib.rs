@@ -8,6 +8,7 @@ pub mod token;
 pub mod parser;
 pub mod ast;
 pub mod error;
+pub mod pratt;
 
 use anyhow::Result;
 

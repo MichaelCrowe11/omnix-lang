@@ -150,11 +150,15 @@ pub enum Expression {
     Literal(Literal),
     Identifier(String),
     Binary(BinaryExpression),
+    Unary(UnaryExpression),
     Call(CallExpression),
+    Member(MemberExpression),
+    Index(IndexExpression),
     Proposal(ProposalExpression),
     Vote(VoteExpression),
     Array(Vec<Expression>),
     Object(Vec<ObjectField>),
+    Assignment(AssignmentExpression),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -162,6 +166,42 @@ pub struct BinaryExpression {
     pub left: Box<Expression>,
     pub op: BinaryOp,
     pub right: Box<Expression>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnaryExpression {
+    pub op: UnaryOp,
+    pub operand: Box<Expression>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UnaryOp {
+    Not,    // !
+    Neg,    // -
+    Plus,   // +
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemberExpression {
+    pub object: Box<Expression>,
+    pub field: String,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexExpression {
+    pub array: Box<Expression>,
+    pub index: Box<Expression>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssignmentExpression {
+    pub target: Box<Expression>,
+    pub op: AssignmentOp,
+    pub value: Box<Expression>,
     pub span: Span,
 }
 
