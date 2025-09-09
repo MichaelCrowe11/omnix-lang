@@ -5,6 +5,7 @@
 
 pub mod consensus;
 pub mod network;
+pub mod network_impl;
 pub mod state;
 pub mod crdt;
 pub mod raft;
