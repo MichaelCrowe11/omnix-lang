@@ -93,12 +93,11 @@ async fn compile_file(input: PathBuf, output: Option<PathBuf>, verbose: bool) ->
     let source = std::fs::read_to_string(&input)?;
     
     // Parse the source code
-    let mut lexer = omnix_compiler::Lexer::new(&source);
-    let mut parser = omnix_compiler::Parser::new(&mut lexer);
-    let ast = parser.parse()?;
+    let tokens = omnix_compiler::lexer::tokenize(&source)?;
+    let program = omnix_compiler::parser::parse(tokens)?;
     
     if verbose {
-        println!("Successfully parsed {} nodes", ast.len());
+        println!("Successfully parsed {} top-level items", program.items.len());
     }
     
     // Generate output path if not provided
@@ -109,7 +108,7 @@ async fn compile_file(input: PathBuf, output: Option<PathBuf>, verbose: bool) ->
     });
     
     // Serialize AST to JSON
-    let json = serde_json::to_string_pretty(&ast)?;
+    let json = serde_json::to_string_pretty(&program)?;
     std::fs::write(&output_path, json)?;
     
     println!("Compiled to: {}", output_path.display());
@@ -125,20 +124,19 @@ async fn run_file(input: PathBuf, node_id: String, port: u16, verbose: bool) -> 
     let source = std::fs::read_to_string(&input)?;
     
     // Parse the source code
-    let mut lexer = omnix_compiler::Lexer::new(&source);
-    let mut parser = omnix_compiler::Parser::new(&mut lexer);
-    let ast = parser.parse()?;
+    let tokens = omnix_compiler::lexer::tokenize(&source)?;
+    let program = omnix_compiler::parser::parse(tokens)?;
+    
+    if verbose {
+        println!("Successfully parsed {} top-level items", program.items.len());
+    }
     
     // Create runtime environment
-    let config = omnix_runtime::NetworkConfig {
-        port,
-        discovery: omnix_runtime::DiscoveryMethod::MDNS,
-    };
-    
-    let mut runtime = omnix_runtime::Runtime::new(node_id, config)?;
+    let config = omnix_runtime::runtime::create_mvp_config(port);
+    let mut executor = omnix_runtime::runtime::Executor::new(node_id, config).await?;
     
     // Execute the program
-    runtime.execute(ast).await?;
+    executor.execute(program).await?;
     
     // Keep running until interrupted
     println!("OMNIX node started. Press Ctrl+C to stop.");
@@ -249,30 +247,45 @@ async fn check_file(input: PathBuf) -> Result<()> {
     let source = std::fs::read_to_string(&input)?;
     
     // Parse the source code
-    let mut lexer = omnix_compiler::Lexer::new(&source);
-    let mut parser = omnix_compiler::Parser::new(&mut lexer);
-    
-    match parser.parse() {
-        Ok(ast) => {
-            println!("✓ Syntax is valid");
-            println!("✓ Found {} top-level definitions", ast.len());
+    match omnix_compiler::lexer::tokenize(&source) {
+        Ok(tokens) => {
+            println!("✓ Lexical analysis successful ({} tokens)", tokens.len());
             
-            // Basic semantic checks
-            for item in &ast {
-                match item {
-                    omnix_compiler::ASTNode::NodeDefinition(node) => {
-                        println!("✓ Node '{}' with {} methods", node.name, node.methods.len());
+            match omnix_compiler::parser::parse(tokens) {
+                Ok(program) => {
+                    println!("✓ Syntax is valid");
+                    println!("✓ Found {} top-level definitions", program.items.len());
+                    
+                    // Basic semantic checks
+                    for item in &program.items {
+                        match item {
+                            omnix_compiler::ast::Item::Node(node) => {
+                                println!("✓ Node '{}' with {} items", node.name, node.items.len());
+                            }
+                            omnix_compiler::ast::Item::Cluster(cluster) => {
+                                println!("✓ Consensus cluster '{}' with {} replicas", cluster.name, cluster.replicas);
+                            }
+                            omnix_compiler::ast::Item::Function(func) => {
+                                println!("✓ Function '{}' with {} parameters", func.name, func.params.len());
+                            }
+                        }
                     }
-                    omnix_compiler::ASTNode::ConsensusCluster(cluster) => {
-                        println!("✓ Consensus cluster '{}' with {} replicas", cluster.name, cluster.replicas);
+                }
+                Err(errors) => {
+                    println!("✗ Syntax errors found:");
+                    for error in errors {
+                        println!("  {}", error);
                     }
-                    _ => {}
+                    return Err(anyhow::anyhow!("Syntax errors found"));
                 }
             }
         }
-        Err(e) => {
-            println!("✗ Syntax error: {}", e);
-            return Err(e);
+        Err(errors) => {
+            println!("✗ Lexical errors found:");
+            for error in errors {
+                println!("  {}", error);
+            }
+            return Err(anyhow::anyhow!("Lexical errors found"));
         }
     }
     

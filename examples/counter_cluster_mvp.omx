@@ -1,0 +1,63 @@
+// Distributed Counter Example - MVP Version
+// Demonstrates consensus-based state management with Raft
+
+@network(port: 8080, discovery: mDNS)
+node CounterNode {
+    @replicated
+    state counter: u64 = 0;
+    
+    function increment() {
+        let proposal = counter + 1;
+        let result = proposal <!> {
+            validators: 3,
+            timeout: 2000,
+            algorithm: Raft
+        };
+        
+        when result.accepted() {
+            counter <#> result.value;
+            broadcast(CounterUpdate(counter));
+        }
+    }
+    
+    function decrement() {
+        let proposal = counter - 1;
+        let result = proposal <!> {
+            validators: 3,
+            timeout: 2000,
+            algorithm: Raft
+        };
+        
+        when result.accepted() {
+            counter <#> result.value;
+            broadcast(CounterUpdate(counter));
+        }
+    }
+    
+    @rpc
+    function get_value() -> u64 {
+        return counter;
+    }
+    
+    on peer_discovered(peer: String) {
+        let greeting = "Hello from " + node_id;
+        broadcast(PeerGreeting(greeting));
+    }
+}
+
+function main() {
+    let node = CounterNode::new();
+    node.start();
+    
+    // Initialize counter value
+    let initial_value = 0;
+    node.counter <#> initial_value;
+    
+    // Simulate some operations
+    node.increment();
+    node.increment();
+    node.decrement();
+    
+    let final_value = node.get_value();
+    println("Final counter value: " + final_value);
+}

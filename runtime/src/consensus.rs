@@ -1,23 +1,25 @@
 /*!
- * Consensus algorithms for OMNIX
+ * Consensus algorithms for OMNIX MVP
+ * Currently only implements Raft consensus
  */
 
-use crate::{ConsensusEngine, ConsensusConfig, ConsensusAlgorithm, ProposalId, Vote};
+use crate::{ConsensusEngine, ConsensusConfig, ConsensusAlgorithm, ProposalId, Vote, NodeId};
+use crate::raft::RaftNode;
 use async_trait::async_trait;
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use std::sync::Arc;
 
-pub fn create_engine(config: ConsensusConfig) -> anyhow::Result<Box<dyn ConsensusEngine>> {
+pub fn create_engine(config: ConsensusConfig, node_id: NodeId) -> anyhow::Result<Box<dyn ConsensusEngine>> {
     match config.algorithm {
         ConsensusAlgorithm::Raft => {
-            Ok(Box::new(RaftConsensus::new(config)?))
+            let raft_node = RaftNode::new(node_id);
+            Ok(Box::new(raft_node))
         }
         ConsensusAlgorithm::PBFT => {
-            Ok(Box::new(PBFTConsensus::new(config)?))
+            // For MVP, PBFT is not implemented
+            Err(anyhow::anyhow!("PBFT not implemented in MVP"))
         }
         ConsensusAlgorithm::Tendermint => {
-            Ok(Box::new(TendermintConsensus::new(config)?))
+            // For MVP, Tendermint is not implemented
+            Err(anyhow::anyhow!("Tendermint not implemented in MVP"))
         }
     }
 }

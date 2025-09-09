@@ -1,5 +1,5 @@
 /*!
- * OMNIX Compiler
+ * OMNIX Compiler v0.1 MVP
  * Distributed consensus language compiler
  */
 
@@ -7,6 +7,7 @@ pub mod lexer;
 pub mod token;
 pub mod parser;
 pub mod ast;
+pub mod error;
 
 use anyhow::Result;
 

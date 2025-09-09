@@ -1,42 +1,236 @@
 /*!
- * OMNIX Abstract Syntax Tree
- * AST definitions for distributed consensus constructs
+ * OMNIX Abstract Syntax Tree v0.1 MVP
+ * Simplified AST for the MVP implementation
  */
 
 use serde::{Deserialize, Serialize};
+use crate::error::Span;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Program {
-    pub nodes: Vec<NodeDefinition>,
-    pub contracts: Vec<Contract>,
-    pub services: Vec<Service>,
-    pub pipelines: Vec<Pipeline>,
-    pub functions: Vec<Function>,
+    pub items: Vec<Item>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Item {
+    Node(NodeDefinition),
+    Cluster(ConsensusCluster),
+    Function(Function),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeDefinition {
     pub name: String,
-    pub config: NodeConfig,
-    pub state: Vec<StateVariable>,
-    pub methods: Vec<Method>,
-    pub handlers: Vec<EventHandler>,
+    pub annotations: Vec<Annotation>,
+    pub items: Vec<NodeItem>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeConfig {
-    pub network_port: u16,
-    pub discovery: DiscoveryMethod,
+pub enum NodeItem {
+    State(StateVariable),
+    Function(Function),
+    EventHandler(EventHandler),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsensusCluster {
+    pub name: String,
+    pub replicas: u32,
     pub consensus: ConsensusAlgorithm,
-    pub replication_factor: u32,
+    pub zones: Option<Vec<String>>,
+    pub items: Vec<ClusterItem>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DiscoveryMethod {
-    MDNS,
-    Static(Vec<String>),
-    Consul,
-    Etcd,
+pub enum ClusterItem {
+    State(StateVariable),
+    Service(Service),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Service {
+    pub name: String,
+    pub params: Vec<Parameter>,
+    pub return_type: Option<Type>,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateVariable {
+    pub annotations: Vec<Annotation>,
+    pub name: String,
+    pub type_: Type,
+    pub initial_value: Option<Expression>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Function {
+    pub annotations: Vec<Annotation>,
+    pub name: String,
+    pub params: Vec<Parameter>,
+    pub return_type: Option<Type>,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventHandler {
+    pub event_name: String,
+    pub params: Vec<Parameter>,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Parameter {
+    pub name: String,
+    pub type_: Type,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Block {
+    pub statements: Vec<Statement>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Statement {
+    Let(LetStatement),
+    Assignment(Assignment),
+    Expression(Expression),
+    When(WhenStatement),
+    Phase(PhaseStatement),
+    Return(Option<Expression>),
+    Broadcast(Expression),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LetStatement {
+    pub name: String,
+    pub value: Expression,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Assignment {
+    pub target: String,
+    pub op: AssignmentOp,
+    pub value: Expression,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AssignmentOp {
+    Assign,     // =
+    Merge,      // <#>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WhenStatement {
+    pub condition: Expression,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PhaseStatement {
+    pub name: String,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Expression {
+    Literal(Literal),
+    Identifier(String),
+    Binary(BinaryExpression),
+    Call(CallExpression),
+    Proposal(ProposalExpression),
+    Vote(VoteExpression),
+    Array(Vec<Expression>),
+    Object(Vec<ObjectField>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BinaryExpression {
+    pub left: Box<Expression>,
+    pub op: BinaryOp,
+    pub right: Box<Expression>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BinaryOp {
+    Add, Sub, Mul, Div,
+    Eq, Ne, Lt, Le, Gt, Ge,
+    And, Or,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CallExpression {
+    pub function: String,
+    pub args: Vec<Expression>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProposalExpression {
+    pub value: Box<Expression>,
+    pub config: ConsensusConfig,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoteExpression {
+    pub value: Box<Expression>,
+    pub config: ConsensusConfig,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsensusConfig {
+    pub validators: Option<u32>,
+    pub timeout: Option<u64>, // milliseconds
+    pub algorithm: Option<ConsensusAlgorithm>,
+    pub quorum: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObjectField {
+    pub name: String,
+    pub value: Expression,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Literal {
+    Integer(i64),
+    UInteger(u64),
+    Float(f64),
+    String(String),
+    Boolean(bool),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Type {
+    U64,
+    I64,
+    F64,
+    Bool,
+    String,
+    Bytes,
+    Vec(Box<Type>),
+    Set(Box<Type>),
+    Map(Box<Type>, Box<Type>),
+    Option(Box<Type>),
+    Result(Box<Type>, Box<Type>),
+    Custom(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,330 +238,76 @@ pub enum ConsensusAlgorithm {
     Raft,
     PBFT,
     Tendermint,
-    HotStuff,
-    Custom(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateVariable {
+pub struct Annotation {
     pub name: String,
-    pub ty: Type,
-    pub replicated: bool,
-    pub crdt_type: Option<CRDTType>,
-    pub initial_value: Option<Expression>,
+    pub params: Vec<AnnotationParam>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum CRDTType {
-    GCounter,
-    PNCounter,
-    LWWMap,
-    ORSet,
-    Custom(String),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Method {
+pub struct AnnotationParam {
     pub name: String,
-    pub visibility: Visibility,
-    pub consensus_required: bool,
-    pub params: Vec<Parameter>,
-    pub return_type: Option<Type>,
-    pub body: Block,
+    pub value: Expression,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Visibility {
-    Public,
-    Private,
-    Internal,
+// Helper methods for AST construction
+impl Program {
+    pub fn new(items: Vec<Item>) -> Self {
+        Self {
+            items,
+            span: Span::unknown(),
+        }
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EventHandler {
-    pub event: EventType,
-    pub handler: Block,
+impl Expression {
+    pub fn span(&self) -> Span {
+        match self {
+            Expression::Binary(expr) => expr.span.clone(),
+            Expression::Call(expr) => expr.span.clone(),
+            Expression::Proposal(expr) => expr.span.clone(),
+            Expression::Vote(expr) => expr.span.clone(),
+            _ => Span::unknown(),
+        }
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EventType {
-    PeerDiscovered,
-    PeerLost,
-    PartitionDetected,
-    ConsensusReached,
-    ViewChange,
-    LeaderElected,
-    Custom(String),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Contract {
-    pub name: String,
-    pub cross_chain: Vec<String>,
-    pub functions: Vec<ContractFunction>,
-    pub state: Vec<StateVariable>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContractFunction {
-    pub name: String,
-    pub params: Vec<Parameter>,
-    pub body: Block,
-    pub modifiers: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Service {
-    pub name: String,
-    pub replicas: u32,
-    pub consensus: ConsensusAlgorithm,
-    pub zones: Vec<String>,
-    pub methods: Vec<ServiceMethod>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceMethod {
-    pub name: String,
-    pub params: Vec<Parameter>,
-    pub return_type: Type,
-    pub body: Block,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Pipeline {
-    pub name: String,
-    pub input: DataSource,
-    pub stages: Vec<Stage>,
-    pub output: DataSink,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Stage {
-    pub name: String,
-    pub workers: WorkerConfig,
-    pub process: Block,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum WorkerConfig {
-    Fixed(u32),
-    AutoScale,
-    GPU(u32),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DataSource {
-    KafkaStream(String),
-    Database(String),
-    API(String),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DataSink {
-    Database(String),
-    Stream(String),
-    File(String),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Function {
-    pub name: String,
-    pub params: Vec<Parameter>,
-    pub return_type: Option<Type>,
-    pub body: Block,
-    pub attributes: Vec<Attribute>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Parameter {
-    pub name: String,
-    pub ty: Type,
-    pub default: Option<Expression>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Attribute {
-    pub name: String,
-    pub args: Vec<Expression>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Block {
-    pub statements: Vec<Statement>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Statement {
-    Expression(Expression),
-    Let {
-        name: String,
-        ty: Option<Type>,
-        value: Expression,
-    },
-    Assignment {
-        target: Expression,
-        value: Expression,
-    },
-    If {
-        condition: Expression,
-        then_block: Block,
-        else_block: Option<Block>,
-    },
-    When {
-        condition: Expression,
-        body: Block,
-    },
-    For {
-        variable: String,
-        iterable: Expression,
-        body: Block,
-    },
-    While {
-        condition: Expression,
-        body: Block,
-    },
-    Return(Option<Expression>),
+// AST traversal and manipulation helpers
+impl Program {
+    pub fn find_main_function(&self) -> Option<&Function> {
+        self.items.iter().find_map(|item| {
+            if let Item::Function(func) = item {
+                if func.name == "main" {
+                    Some(func)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+    }
     
-    // Consensus operations
-    Propose {
-        value: Expression,
-        config: ConsensusConfig,
-    },
-    Vote {
-        proposal: Expression,
-        vote: VoteType,
-    },
-    Commit {
-        target: Expression,
-        value: Expression,
-    },
-    Broadcast {
-        message: Expression,
-    },
-    Gossip {
-        data: Expression,
-        fanout: u32,
-    },
-    Atomic {
-        body: Block,
-    },
-    Phase {
-        name: String,
-        body: Block,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConsensusConfig {
-    pub validators: Option<u32>,
-    pub timeout: Option<u64>,
-    pub algorithm: Option<ConsensusAlgorithm>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum VoteType {
-    Accept,
-    Reject,
-    Abstain,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Expression {
-    Literal(Literal),
-    Identifier(String),
-    Binary {
-        left: Box<Expression>,
-        op: BinaryOp,
-        right: Box<Expression>,
-    },
-    Unary {
-        op: UnaryOp,
-        operand: Box<Expression>,
-    },
-    Call {
-        function: Box<Expression>,
-        args: Vec<Expression>,
-    },
-    MemberAccess {
-        object: Box<Expression>,
-        member: String,
-    },
-    Index {
-        object: Box<Expression>,
-        index: Box<Expression>,
-    },
+    pub fn nodes(&self) -> impl Iterator<Item = &NodeDefinition> {
+        self.items.iter().filter_map(|item| {
+            if let Item::Node(node) = item {
+                Some(node)
+            } else {
+                None
+            }
+        })
+    }
     
-    // Consensus expressions
-    ConsensusOp {
-        op: ConsensusOperator,
-        left: Box<Expression>,
-        right: Option<Box<Expression>>,
-    },
-    QuorumCheck {
-        value: Box<Expression>,
-        threshold: f32,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ConsensusOperator {
-    Propose,    // <!>
-    Vote,       // <?>
-    Commit,     // <#>
-    Broadcast,  // <~>
-    Gossip,     // <@>
-    Sync,       // <=>
-    Partition,  // <|>
-    Quorum,     // <*>
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Literal {
-    Integer(i64),
-    Float(f64),
-    String(String),
-    Boolean(bool),
-    Null,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Type {
-    Bool,
-    U32,
-    U64,
-    I32,
-    I64,
-    F32,
-    F64,
-    String,
-    Vec(Box<Type>),
-    Set(Box<Type>),
-    Map(Box<Type>, Box<Type>),
-    NodeId,
-    Proposal,
-    Vote,
-    Custom(String),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum BinaryOp {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulo,
-    Equal,
-    NotEqual,
-    Less,
-    LessEqual,
-    Greater,
-    GreaterEqual,
-    And,
-    Or,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum UnaryOp {
-    Not,
-    Negate,
+    pub fn clusters(&self) -> impl Iterator<Item = &ConsensusCluster> {
+        self.items.iter().filter_map(|item| {
+            if let Item::Cluster(cluster) = item {
+                Some(cluster)
+            } else {
+                None
+            }
+        })
+    }
 }

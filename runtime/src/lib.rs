@@ -7,6 +7,8 @@ pub mod consensus;
 pub mod network;
 pub mod state;
 pub mod crdt;
+pub mod raft;
+pub mod runtime;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -27,7 +29,7 @@ pub struct Runtime {
 impl Runtime {
     pub async fn new(node_id: NodeId, config: RuntimeConfig) -> anyhow::Result<Self> {
         let consensus = Arc::new(RwLock::new(
-            consensus::create_engine(config.consensus)?
+            consensus::create_engine(config.consensus, node_id.clone())?
         ));
         
         let network = Arc::new(RwLock::new(
