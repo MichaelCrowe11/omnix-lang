@@ -1,0 +1,95 @@
+// Blockchain Consensus Example  
+// Demonstrates Byzantine fault-tolerant consensus
+
+@byzantine(f: 3, n: 10)
+consensus cluster Blockchain {
+    replicas: 10
+    consensus: PBFT  
+    zones: ["us-east", "eu-west", "asia-pacific"]
+    
+    @replicated
+    state blocks: Vec<Block> = [];
+    
+    @replicated  
+    state validators: Set<NodeId> = set![];
+    
+    service mine_block(transactions: Vec<Transaction>) -> Block {
+        // Create new block
+        let block = Block {
+            id: generate_id(),
+            previous: blocks.last().hash,
+            transactions: transactions,
+            timestamp: now(),
+            miner: self.node_id
+        };
+        
+        // Propose block to network
+        let proposal = block <!> {
+            validators: validators.len(),
+            timeout: 30000ms,
+            algorithm: Consensus::PBFT
+        };
+        
+        // Byzantine agreement protocol
+        phase prepare {
+            broadcast(Prepare(proposal));
+            let votes = collect_votes(2 * f + 1);
+            
+            if votes.majority_accept() {
+                advance_to_commit();
+            } else {
+                reject_proposal(proposal);
+            }
+        }
+        
+        phase commit {
+            if proposal.prepared() {
+                broadcast(Commit(proposal));
+                let commits = collect_votes(2 * f + 1);
+                
+                if commits.majority_accept() {
+                    blocks <#> proposal.block;
+                    return proposal.block;
+                }
+            }
+        }
+    }
+    
+    service validate_block(block: Block) -> bool {
+        // Validate transactions
+        for tx in block.transactions {
+            if !tx.is_valid() {
+                return false;
+            }
+        }
+        
+        // Check proof of work or stake
+        return block.meets_consensus_rules();
+    }
+}
+
+function main() {
+    let blockchain = Blockchain::new();
+    blockchain.start();
+    
+    // Add initial validators
+    blockchain.add_validator(node_id("validator_1"));
+    blockchain.add_validator(node_id("validator_2"));
+    blockchain.add_validator(node_id("validator_3"));
+    
+    // Mine genesis block
+    let genesis = blockchain.mine_block(vec![]);
+    println("Genesis block mined: {}", genesis.id);
+    
+    // Continuous mining
+    loop {
+        let pending_txs = get_pending_transactions();
+        if !pending_txs.is_empty() {
+            let block = blockchain.mine_block(pending_txs);
+            println("Block {} mined with {} transactions", 
+                block.id, block.transactions.len());
+        }
+        
+        await timeout(10s);
+    }
+}

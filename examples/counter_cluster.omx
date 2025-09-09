@@ -1,0 +1,68 @@
+// Distributed Counter Example
+// Shows consensus-based state management
+
+@network(port: 8080, discovery: mDNS)
+node CounterNode {
+    @replicated
+    state counter: u64 = 0;
+    
+    function increment() {
+        let proposal = counter + 1;
+        let result = proposal <!> {
+            validators: 5,
+            timeout: 3000ms,
+            algorithm: Consensus::Raft
+        };
+        
+        when result.accepted() {
+            counter <#> result.value;
+            broadcast(CounterUpdate(counter));
+        }
+    }
+    
+    function decrement() {
+        let proposal = counter - 1;
+        let result = proposal <!> {
+            validators: 3,
+            timeout: 2000ms
+        };
+        
+        when result.accepted() {
+            counter <#> result.value;
+            broadcast(CounterUpdate(counter));
+        }
+    }
+    
+    @rpc
+    function get_value() -> u64 {
+        return counter;
+    }
+    
+    on peer_discovered(peer: Peer) {
+        sync_with_peer(peer);
+    }
+    
+    on partition_detected {
+        if is_majority_partition() {
+            continue_operation();
+        } else {
+            enter_read_only_mode();
+        }
+    }
+}
+
+function main() {
+    let node = CounterNode::new();
+    
+    // Start the distributed node
+    node.start();
+    
+    // Join the cluster
+    node.join_cluster("counter-cluster");
+    
+    // Wait for initial synchronization
+    await node.synchronized();
+    
+    println("Node {} joined counter cluster", node.id);
+    println("Current counter value: {}", node.get_value());
+}

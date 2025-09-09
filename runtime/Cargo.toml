@@ -1,0 +1,30 @@
+[package]
+name = "omnix-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+
+# Networking
+libp2p = { version = "0.53", features = ["tcp", "mdns", "yamux", "noise", "gossipsub", "kad", "identify"] }
+quinn = "0.10"  # QUIC support
+
+# Consensus
+raft = "0.7"
+sha2 = "0.10"
+ed25519-dalek = "2.0"
+
+# CRDTs
+crdts = "7.0"
+
+# Storage
+sled = "0.34"
+rocksdb = "0.21"
