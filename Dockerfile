@@ -4,15 +4,25 @@ FROM rust:1.75 as builder
 WORKDIR /usr/src/omnix
 
 # Copy manifests
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 COPY compiler/Cargo.toml compiler/
 COPY runtime/Cargo.toml runtime/
 COPY consensus/Cargo.toml consensus/
 COPY networking/Cargo.toml networking/
 
-# Copy source code
+# Create dummy source files for dependencies
+RUN mkdir -p compiler/src runtime/src consensus/src networking/src src
+RUN echo "fn main() {}" > src/main.rs
+RUN touch compiler/src/lib.rs runtime/src/lib.rs consensus/src/lib.rs networking/src/lib.rs
+
+# Build dependencies only
+RUN cargo build --release --bin omnix || true
+
+# Copy actual source code
 COPY compiler/src compiler/src
 COPY runtime/src runtime/src
+COPY consensus/src consensus/src
+COPY networking/src networking/src
 COPY src/ src/
 
 # Build the release binary

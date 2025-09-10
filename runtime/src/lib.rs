@@ -10,6 +10,7 @@ pub mod state;
 pub mod crdt;
 pub mod raft;
 pub mod runtime;
+pub mod http_api;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

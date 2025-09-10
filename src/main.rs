@@ -116,6 +116,14 @@ async fn compile_file(input: PathBuf, output: Option<PathBuf>, verbose: bool) ->
 }
 
 async fn run_file(input: PathBuf, node_id: String, port: u16, verbose: bool) -> Result<()> {
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(tracing::Level::INFO.into())
+        )
+        .init();
+    
     if verbose {
         println!("Running OMNIX file: {}", input.display());
         println!("Node ID: {}, Port: {}", node_id, port);
@@ -133,15 +141,45 @@ async fn run_file(input: PathBuf, node_id: String, port: u16, verbose: bool) -> 
     
     // Create runtime environment
     let config = omnix_runtime::runtime::create_mvp_config(port);
-    let mut executor = omnix_runtime::runtime::Executor::new(node_id, config).await?;
+    let executor = omnix_runtime::runtime::Executor::new(node_id.clone(), config).await?;
+    let executor = std::sync::Arc::new(tokio::sync::RwLock::new(executor));
+    
+    // Create HTTP API state
+    let api_state = omnix_runtime::http_api::AppState {
+        executor: executor.clone(),
+        node_id: node_id.clone(),
+        counter: std::sync::Arc::new(tokio::sync::RwLock::new(0)),
+    };
+    
+    // Start HTTP API server
+    let api_addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
+    let api_handle = tokio::spawn(async move {
+        if let Err(e) = omnix_runtime::http_api::start_server(api_addr, api_state).await {
+            eprintln!("HTTP API error: {}", e);
+        }
+    });
     
     // Execute the program
-    executor.execute(program).await?;
+    executor.write().await.execute(program).await?;
     
-    // Keep running until interrupted
-    println!("OMNIX node started. Press Ctrl+C to stop.");
-    tokio::signal::ctrl_c().await?;
-    println!("Shutting down...");
+    println!("OMNIX node '{}' started on port {}", node_id, port);
+    println!("HTTP API available at http://localhost:{}", port);
+    println!("  GET  /status     - Node status");
+    println!("  GET  /value      - Current counter value");
+    println!("  POST /increment  - Increment counter");
+    println!("  POST /decrement  - Decrement counter");
+    println!("");
+    println!("Press Ctrl+C to stop...");
+    
+    // Wait for shutdown signal
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            println!("\nShutting down...");
+        }
+        _ = api_handle => {
+            println!("API server stopped");
+        }
+    }
     
     Ok(())
 }

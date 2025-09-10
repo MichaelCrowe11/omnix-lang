@@ -125,7 +125,7 @@ pub type CompilerResult<T> = Result<T, Vec<Diagnostic>>;
 /// Helper for collecting diagnostics during compilation
 #[derive(Debug, Default)]
 pub struct DiagnosticCollector {
-    diagnostics: Vec<Diagnostic>,
+    pub diagnostics: Vec<Diagnostic>,
 }
 
 impl DiagnosticCollector {
