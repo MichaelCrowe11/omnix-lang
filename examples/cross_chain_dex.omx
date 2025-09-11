@@ -1,0 +1,354 @@
+// Cross-Chain Decentralized Exchange (DEX) with OMNIX
+// Demonstrates: Cross-chain operations, atomic swaps, liquidity pools
+
+@cross_chain(["ethereum", "polygon", "arbitrum", "optimism", "bsc"])
+@upgradeable(proxy: TransparentProxy)
+contract CrossChainDEX {
+    
+    // Liquidity pools across chains
+    @replicated
+    state pools: Map<(ChainId, TokenPair), LiquidityPool> = Map::new();
+    
+    @replicated
+    state orders: Map<OrderId, Order> = Map::new();
+    
+    @persistent
+    state total_volume: Map<ChainId, TokenAmount> = Map::new();
+    
+    // Cross-chain atomic swap
+    function atomic_swap(
+        from_chain: ChainId,
+        to_chain: ChainId,
+        from_token: TokenAddress,
+        to_token: TokenAddress,
+        amount: TokenAmount,
+        min_received: TokenAmount
+    ) -> Result<SwapReceipt, SwapError> {
+        
+        // Phase 1: Lock tokens on source chain
+        phase lock_source {
+            let lock_tx = lock_tokens <!> {
+                chain: from_chain,
+                token: from_token,
+                amount: amount,
+                timeout: 30000ms,
+                validators: 3
+            };
+            
+            when !lock_tx.accepted() {
+                return Err(SwapError::LockFailed);
+            }
+        }
+        
+        // Phase 2: Calculate swap rate across chains
+        phase calculate_swap {
+            let rate = calculate_cross_chain_rate(
+                from_chain, to_chain,
+                from_token, to_token
+            ) <@> {
+                oracles: 5,
+                consensus: Median
+            };
+            
+            let output_amount = amount * rate;
+            
+            if output_amount < min_received {
+                // Rollback lock
+                unlock_tokens(from_chain, from_token, amount);
+                return Err(SwapError::SlippageExceeded);
+            }
+        }
+        
+        // Phase 3: Mint/Transfer on destination chain
+        phase execute_swap {
+            let mint_tx = mint_tokens <!> {
+                chain: to_chain,
+                token: to_token,
+                amount: output_amount,
+                recipient: msg.sender,
+                validators: 5,
+                algorithm: Consensus::HotStuff
+            };
+            
+            when mint_tx.accepted() {
+                // Burn locked tokens on source
+                burn_locked_tokens(from_chain, from_token, amount);
+                
+                // Update statistics
+                total_volume[from_chain] <#> amount;
+                total_volume[to_chain] <#> output_amount;
+                
+                // Emit cross-chain event
+                broadcast(CrossChainSwap {
+                    id: generate_swap_id(),
+                    from: (from_chain, from_token, amount),
+                    to: (to_chain, to_token, output_amount),
+                    user: msg.sender,
+                    timestamp: now()
+                });
+                
+                return Ok(SwapReceipt {
+                    swap_id: mint_tx.id,
+                    input: amount,
+                    output: output_amount,
+                    rate: rate
+                });
+            }
+        }
+        
+        // Automatic rollback on failure
+        on failure {
+            unlock_tokens(from_chain, from_token, amount);
+            return Err(SwapError::SwapFailed);
+        }
+    }
+    
+    // Add liquidity across chains
+    function add_liquidity(
+        chain: ChainId,
+        token_a: TokenAddress,
+        token_b: TokenAddress,
+        amount_a: TokenAmount,
+        amount_b: TokenAmount
+    ) -> LiquidityToken {
+        
+        let pool_key = (chain, TokenPair(token_a, token_b));
+        let pool = pools.get_or_create(pool_key);
+        
+        // Add liquidity with consensus
+        let lp_tokens = pool.add_liquidity <!> {
+            amounts: (amount_a, amount_b),
+            provider: msg.sender,
+            validators: 3
+        };
+        
+        when lp_tokens.accepted() {
+            pools <#> Map::insert(pool_key, pool);
+            
+            broadcast(LiquidityAdded {
+                chain: chain,
+                pool: pool_key,
+                provider: msg.sender,
+                amounts: (amount_a, amount_b),
+                lp_tokens: lp_tokens.value
+            });
+            
+            return lp_tokens.value;
+        }
+    }
+    
+    // Cross-chain order book
+    service place_order(
+        order_type: OrderType,
+        from_chain: ChainId,
+        from_token: TokenAddress,
+        to_chain: ChainId,
+        to_token: TokenAddress,
+        amount: TokenAmount,
+        price: Price
+    ) -> OrderId {
+        
+        let order = Order {
+            id: generate_order_id(),
+            order_type: order_type,
+            from: (from_chain, from_token),
+            to: (to_chain, to_token),
+            amount: amount,
+            price: price,
+            maker: msg.sender,
+            status: OrderStatus::Open,
+            timestamp: now()
+        };
+        
+        // Submit order to consensus
+        let result = order <!> {
+            validators: 5,
+            timeout: 2000ms
+        };
+        
+        when result.accepted() {
+            orders <#> Map::insert(order.id, order);
+            
+            // Try to match immediately
+            match_orders(order.id);
+            
+            broadcast(OrderPlaced {
+                order: order,
+                chain: from_chain
+            });
+            
+            return order.id;
+        }
+    }
+    
+    // Order matching engine
+    function match_orders(order_id: OrderId) {
+        let order = orders.get(order_id);
+        
+        // Find matching orders across chains
+        let matches = find_matches(order) <@> {
+            chains: all_chains(),
+            parallel: true
+        };
+        
+        for match in matches {
+            // Execute matched trade atomically
+            phase execute_match {
+                let trade = execute_trade <!> {
+                    maker_order: order,
+                    taker_order: match,
+                    validators: 7,
+                    algorithm: Consensus::Tendermint
+                };
+                
+                when trade.accepted() {
+                    // Update order states
+                    orders[order_id].status = OrderStatus::Filled;
+                    orders[match.id].status = OrderStatus::Filled;
+                    
+                    // Transfer assets cross-chain
+                    transfer_cross_chain(
+                        order.from, match.to,
+                        order.amount
+                    );
+                    
+                    broadcast(TradeExecuted {
+                        maker: order.maker,
+                        taker: match.maker,
+                        amount: order.amount,
+                        price: match.price,
+                        chains: (order.from.0, match.to.0)
+                    });
+                    
+                    break; // Order filled
+                }
+            }
+        }
+    }
+    
+    // Yield farming across chains
+    function stake_lp_tokens(
+        chain: ChainId,
+        pool: TokenPair,
+        amount: TokenAmount
+    ) -> StakeReceipt {
+        
+        let staking_pool = get_staking_pool(chain, pool);
+        
+        let stake = staking_pool.stake <!> {
+            user: msg.sender,
+            amount: amount,
+            validators: 3
+        };
+        
+        when stake.accepted() {
+            // Calculate rewards across all chains
+            let rewards = calculate_rewards <@> {
+                chains: all_chains(),
+                user: msg.sender,
+                amount: amount
+            };
+            
+            broadcast(TokensStaked {
+                user: msg.sender,
+                chain: chain,
+                pool: pool,
+                amount: amount,
+                apy: rewards.apy
+            });
+            
+            return StakeReceipt {
+                stake_id: stake.id,
+                amount: amount,
+                apy: rewards.apy,
+                rewards_token: rewards.token
+            };
+        }
+    }
+    
+    // Cross-chain governance
+    function propose_parameter_change(
+        parameter: Parameter,
+        new_value: Bytes,
+        affected_chains: Vec<ChainId>
+    ) -> ProposalId {
+        
+        let proposal = Proposal {
+            id: generate_proposal_id(),
+            parameter: parameter,
+            new_value: new_value,
+            chains: affected_chains,
+            proposer: msg.sender,
+            votes_for: 0,
+            votes_against: 0,
+            status: ProposalStatus::Active,
+            end_time: now() + 7_days()
+        };
+        
+        // Submit proposal across chains
+        let result = proposal <!> {
+            chains: affected_chains,
+            validators: 7,
+            algorithm: Consensus::PBFT
+        };
+        
+        when result.accepted() {
+            proposals <#> Map::insert(proposal.id, proposal);
+            
+            broadcast(ProposalCreated {
+                proposal: proposal,
+                chains: affected_chains
+            });
+            
+            return proposal.id;
+        }
+    }
+    
+    // Emergency pause across all chains
+    @admin_only
+    function emergency_pause() {
+        let pause_signal = EmergencyPause {
+            timestamp: now(),
+            admin: msg.sender
+        };
+        
+        // Broadcast to all chains immediately
+        let result = pause_signal <!> {
+            chains: all_chains(),
+            validators: all_validators(),
+            priority: Critical,
+            timeout: 1000ms
+        };
+        
+        when result.accepted() {
+            paused = true;
+            
+            broadcast(SystemPaused {
+                chains: all_chains(),
+                timestamp: now()
+            });
+        }
+    }
+}
+
+// Deploy and initialize
+function deploy_dex() {
+    let dex = CrossChainDEX::deploy();
+    
+    // Initialize on each chain
+    for chain in ["ethereum", "polygon", "arbitrum", "optimism", "bsc"] {
+        dex.initialize(chain);
+        
+        // Set up initial liquidity pools
+        dex.create_pool(
+            chain,
+            get_usdc_address(chain),
+            get_weth_address(chain),
+            1000000 * 10^6,  // 1M USDC
+            500 * 10^18      // 500 WETH
+        );
+    }
+    
+    println("CrossChainDEX deployed across {} chains", 5);
+    return dex;
+}

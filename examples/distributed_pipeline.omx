@@ -1,0 +1,78 @@
+// OMNIX Distributed Pipeline Example
+// Demonstrates native pipeline processing with auto-scaling
+
+// Define a data processing pipeline
+pipeline DataProcessor {
+    input: "stream://kafka/raw-data"
+    
+    stage preprocess {
+        parallel: true
+        workers: "auto_scale"
+        process: function(data) {
+            // Clean and validate incoming data
+            return data.filter(item => item.valid === true)
+                      .map(item => ({
+                          ...item,
+                          normalized: item.value / 100,
+                          processed_at: now()
+                      }));
+        }
+    }
+    
+    stage ml_inference {
+        gpu_workers: 4
+        parallel: true
+        model: "data_classifier_v2"
+        process: function(data) {
+            // Simulate ML inference
+            return data.map(item => ({
+                ...item,
+                prediction: "positive",
+                confidence: Math.random()
+            }));
+        }
+    }
+    
+    stage aggregation {
+        workers: 2
+        process: function(data) {
+            // Aggregate results
+            let positive = data.filter();
+            let negative = data.filter();
+            
+            return {
+                total: data.length,
+                positive_count: positive.length,
+                negative_count: negative.length,
+                avg_confidence: data.reduce((sum, item) => sum + item.confidence, 0) / data.length,
+                timestamp: now()
+            };
+        }
+    }
+    
+    output: "database://analytics/results"
+}
+
+function main() {
+    println("Starting distributed data processing pipeline...");
+    
+    // Execute pipeline with sample data
+    let sample_data = [
+        { id: 1, value: 150, valid: true },
+        { id: 2, value: 200, valid: true },
+        { id: 3, value: 75, valid: false },
+        { id: 4, value: 300, valid: true },
+        { id: 5, value: 125, valid: true }
+    ];
+    
+    // Run the pipeline
+    let result = DataProcessor.execute(sample_data);
+    
+    println("Pipeline execution completed:");
+    println("Total stages: " + result.stages);
+    println("Final result:", result.data);
+    
+    return result;
+}
+
+main();

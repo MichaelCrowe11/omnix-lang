@@ -1,0 +1,37 @@
+// Test OMNIX program
+
+function main() {
+    println("Hello from OMNIX Compiler!");
+    println("Testing basic features...");
+    
+    // Variables
+    let x = 42;
+    let y = 3.14;
+    let message = "OMNIX";
+    
+    println("Variables initialized");
+    
+    // Conditionals
+    if (x > 40) {
+        println("x is greater than 40");
+    } else {
+        println("x is not greater than 40");
+    }
+    
+    // Counter
+    let counter = 0;
+    let max = 3;
+    while (counter < max) {
+        println("Counter value:");
+        println(counter);
+        counter = counter + 1;
+    }
+    
+    // Test consensus (simulated)
+    println("Testing consensus simulation...");
+    
+    return "Success!";
+}
+
+// Execute main
+main();

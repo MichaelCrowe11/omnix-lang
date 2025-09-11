@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMNIX Playground - Try OMNIX in Your Browser</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+        
+        .tagline {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .container {
+            flex: 1;
+            display: flex;
+            padding: 2rem;
+            gap: 2rem;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        .editor-panel, .output-panel {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            background: #2d3748;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .run-button {
+            background: #48bb78;
+        }
+        
+        .run-button:hover {
+            background: #38a169;
+        }
+        
+        .clear-button {
+            background: #f56565;
+        }
+        
+        .clear-button:hover {
+            background: #e53e3e;
+        }
+        
+        .editor-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        .CodeMirror {
+            height: 100%;
+            font-size: 14px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+        
+        .output {
+            flex: 1;
+            padding: 1rem;
+            background: #1a202c;
+            color: #e2e8f0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .output-line {
+            margin: 0.25rem 0;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .output-timestamp {
+            color: #718096;
+            margin-right: 1rem;
+            font-size: 11px;
+        }
+        
+        .output-success {
+            color: #48bb78;
+        }
+        
+        .output-error {
+            color: #f56565;
+        }
+        
+        .output-info {
+            color: #4299e1;
+        }
+        
+        .output-warning {
+            color: #ed8936;
+        }
+        
+        .examples-bar {
+            background: #edf2f7;
+            padding: 0.5rem 1rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            border-bottom: 1px solid #cbd5e0;
+        }
+        
+        .example-button {
+            background: white;
+            color: #4a5568;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            border: 1px solid #cbd5e0;
+        }
+        
+        .example-button:hover {
+            background: #f7fafc;
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .status-bar {
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #4a5568;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #48bb78;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+            
+            .header {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 1.2rem;
+            }
+            
+            .tagline {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">O</div>
+            <div>
+                <h1>OMNIX Playground</h1>
+                <div class="tagline">Try OMNIX in your browser - no installation required</div>
+            </div>
+        </div>
+        <div>
+            <button onclick="shareCode()">📤 Share</button>
+            <button onclick="downloadCode()">💾 Download</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="editor-panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span>📝</span>
+                    <span>Code Editor</span>
+                </div>
+                <div class="controls">
+                    <button class="run-button" onclick="runCode()">
+                        ▶ Run
+                    </button>
+                    <button onclick="formatCode()">🎨 Format</button>
+                </div>
+            </div>
+            <div class="examples-bar">
+                <span>Examples:</span>
+                <button class="example-button" onclick="loadExample('hello')">Hello World</button>
+                <button class="example-button" onclick="loadExample('counter')">Counter</button>
+                <button class="example-button" onclick="loadExample('consensus')">Consensus</button>
+                <button class="example-button" onclick="loadExample('crosschain')">Cross-Chain</button>
+                <button class="example-button" onclick="loadExample('kvstore')">KV Store</button>
+            </div>
+            <div class="editor-container">
+                <textarea id="code-editor"></textarea>
+            </div>
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>OMNIX v0.2.0 Ready</span>
+                </div>
+                <div>
+                    <span id="cursor-position">Line 1, Col 1</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="output-panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span>📊</span>
+                    <span>Output</span>
+                </div>
+                <div class="controls">
+                    <button class="clear-button" onclick="clearOutput()">🗑️ Clear</button>
+                </div>
+            </div>
+            <div class="output" id="output">
+                <div class="output-line">
+                    <span class="output-info">Welcome to OMNIX Playground! Write your code and click Run to execute.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script>
+        // Initialize CodeMirror
+        const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+            mode: 'javascript',
+            theme: 'monokai',
+            lineNumbers: true,
+            lineWrapping: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            indentUnit: 4,
+            tabSize: 4,
+            value: ''
+        });
+        
+        // Update cursor position
+        editor.on('cursorActivity', function() {
+            const cursor = editor.getCursor();
+            document.getElementById('cursor-position').textContent = 
+                `Line ${cursor.line + 1}, Col ${cursor.ch + 1}`;
+        });
+        
+        // Example programs
+        const examples = {
+            hello: `// Hello World in OMNIX
+function main() {
+    println("Hello from OMNIX!");
+    println("Planet-scale computing made simple.");
+}`,
+            
+            counter: `// Distributed Counter
+@network(port: 8080, discovery: mDNS)
+node CounterNode {
+    @replicated
+    state counter: u64 = 0;
+    
+    function increment() {
+        let proposal = counter + 1;
+        let result = proposal <!> {
+            validators: 3,
+            timeout: 2000ms
+        };
+        
+        when result.accepted() {
+            counter <#> result.value;
+            broadcast(CounterUpdate(counter));
+        }
+    }
+    
+    @rpc
+    function get_value() -> u64 {
+        return counter;
+    }
+}`,
+            
+            consensus: `// Consensus Example
+consensus cluster Service {
+    replicas: 5
+    consensus: PBFT
+    zones: ["us-east", "eu-west", "asia"]
+    
+    service handle_request(req: Request) -> Response {
+        let result = process(req) <!> {
+            validators: 3,
+            algorithm: Consensus::PBFT
+        };
+        
+        when result.accepted() {
+            state <#> result.value;
+            return Response { success: true };
+        }
+    }
+}`,
+            
+            crosschain: `// Cross-Chain Swap
+@cross_chain(["ethereum", "polygon"])
+contract AtomicSwap {
+    function swap(
+        from_chain: ChainId,
+        to_chain: ChainId,
+        amount: TokenAmount
+    ) {
+        // Lock on source chain
+        lock_tokens <!> {
+            chain: from_chain,
+            amount: amount
+        };
+        
+        // Mint on destination
+        mint_tokens <!> {
+            chain: to_chain,
+            amount: amount
+        };
+        
+        broadcast(SwapComplete {
+            from: from_chain,
+            to: to_chain,
+            amount: amount
+        });
+    }
+}`,
+            
+            kvstore: `// Key-Value Store
+consensus cluster KVStore {
+    @replicated
+    state store: Map<String, Bytes> = Map::new();
+    
+    service put(key: String, value: Bytes) {
+        let proposal = { op: "put", key, value };
+        
+        let result = proposal <!> {
+            validators: 5,
+            algorithm: Consensus::Raft
+        };
+        
+        when result.accepted() {
+            store <#> Map::insert(key, value);
+            broadcast(KVUpdate { key, value });
+        }
+    }
+    
+    @rpc
+    function get(key: String) -> Option<Bytes> {
+        return store.get(key);
+    }
+}`
+        };
+        
+        // Load default example
+        editor.setValue(examples.hello);
+        
+        function loadExample(name) {
+            if (examples[name]) {
+                editor.setValue(examples[name]);
+                addOutput('info', `Loaded example: ${name}`);
+            }
+        }
+        
+        function runCode() {
+            const code = editor.getValue();
+            addOutput('info', '⚡ Executing OMNIX code...');
+            
+            // Simulate execution (in real implementation, this would call a backend)
+            setTimeout(() => {
+                // Simple pattern matching for demo
+                if (code.includes('println')) {
+                    const matches = code.match(/println\("([^"]*)"\)/g);
+                    if (matches) {
+                        matches.forEach(match => {
+                            const text = match.match(/println\("([^"]*)"\)/)[1];
+                            addOutput('success', text);
+                        });
+                    }
+                } else if (code.includes('consensus')) {
+                    addOutput('success', '✓ Consensus cluster initialized');
+                    addOutput('info', 'Nodes: 5 | Algorithm: PBFT | Zones: 3');
+                } else if (code.includes('cross_chain')) {
+                    addOutput('success', '✓ Cross-chain contract deployed');
+                    addOutput('info', 'Chains: ethereum, polygon');
+                } else if (code.includes('KVStore')) {
+                    addOutput('success', '✓ KV Store cluster started');
+                    addOutput('info', 'Replication factor: 3 | Consensus: Raft');
+                } else {
+                    addOutput('success', '✓ Code executed successfully');
+                }
+                
+                addOutput('info', `Execution time: ${Math.random() * 100 + 50}ms`);
+            }, 500);
+        }
+        
+        function formatCode() {
+            // Simple formatting (in real implementation, would use proper formatter)
+            let code = editor.getValue();
+            
+            // Basic indentation
+            let lines = code.split('\n');
+            let indentLevel = 0;
+            let formatted = [];
+            
+            for (let line of lines) {
+                let trimmed = line.trim();
+                
+                if (trimmed.endsWith('}')) {
+                    indentLevel = Math.max(0, indentLevel - 1);
+                }
+                
+                formatted.push('    '.repeat(indentLevel) + trimmed);
+                
+                if (trimmed.endsWith('{')) {
+                    indentLevel++;
+                }
+            }
+            
+            editor.setValue(formatted.join('\n'));
+            addOutput('success', '✓ Code formatted');
+        }
+        
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+            addOutput('info', 'Output cleared');
+        }
+        
+        function addOutput(type, message) {
+            const output = document.getElementById('output');
+            const line = document.createElement('div');
+            line.className = 'output-line';
+            
+            const timestamp = new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            
+            line.innerHTML = `
+                <span class="output-timestamp">[${timestamp}]</span>
+                <span class="output-${type}">${message}</span>
+            `;
+            
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function shareCode() {
+            const code = editor.getValue();
+            const encoded = btoa(encodeURIComponent(code));
+            const url = `${window.location.origin}${window.location.pathname}#${encoded}`;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                addOutput('success', '✓ Share URL copied to clipboard!');
+            });
+        }
+        
+        function downloadCode() {
+            const code = editor.getValue();
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'program.omx';
+            a.click();
+            URL.revokeObjectURL(url);
+            addOutput('success', '✓ Code downloaded as program.omx');
+        }
+        
+        // Load shared code from URL
+        if (window.location.hash) {
+            try {
+                const encoded = window.location.hash.substring(1);
+                const code = decodeURIComponent(atob(encoded));
+                editor.setValue(code);
+                addOutput('info', 'Loaded shared code from URL');
+            } catch (e) {
+                console.error('Failed to load shared code:', e);
+            }
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                runCode();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                downloadCode();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "OMNIX",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#annotations"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#constants"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.omnix",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.omnix",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.omnix",
+          "match": "\\b(if|else|when|phase|return|for|while|loop|break|continue)\\b"
+        },
+        {
+          "name": "keyword.declaration.omnix",
+          "match": "\\b(consensus|cluster|node|function|service|state|let|on)\\b"
+        },
+        {
+          "name": "keyword.operator.omnix",
+          "match": "\\b(broadcast|emit|await|sync_with_peer)\\b"
+        },
+        {
+          "name": "storage.modifier.omnix",
+          "match": "\\b(replicated|persistent|atomic|rpc)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.omnix",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.omnix",
+              "match": "\\\\(n|r|t|\\\\|\")"
+            },
+            {
+              "name": "meta.embedded.expression.omnix",
+              "begin": "\\{",
+              "end": "\\}",
+              "patterns": [
+                {
+                  "include": "$self"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.omnix",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.omnix",
+              "match": "\\\\(n|r|t|\\\\|')"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.omnix",
+          "match": "\\b[0-9]+\\.[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.omnix",
+          "match": "\\b[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.hex.omnix",
+          "match": "\\b0x[0-9a-fA-F]+\\b"
+        },
+        {
+          "name": "constant.numeric.time.omnix",
+          "match": "\\b[0-9]+(ms|s|m|h)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.omnix",
+          "match": "\\b(u64|i64|f64|bool|String|Bytes)\\b"
+        },
+        {
+          "name": "support.type.collection.omnix",
+          "match": "\\b(Vec|Set|Map|Option|Result)\\b"
+        },
+        {
+          "name": "support.type.consensus.omnix",
+          "match": "\\b(Consensus|Raft|PBFT|Tendermint|ChainId|TokenAmount|Peer)\\b"
+        },
+        {
+          "name": "entity.name.type.omnix",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "annotations": {
+      "patterns": [
+        {
+          "name": "meta.annotation.omnix",
+          "begin": "@",
+          "end": "(?=\\s|$|\\{)",
+          "patterns": [
+            {
+              "name": "entity.name.function.decorator.omnix",
+              "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+            },
+            {
+              "begin": "\\(",
+              "end": "\\)",
+              "patterns": [
+                {
+                  "include": "$self"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.consensus.omnix",
+          "match": "<!>|<\\?>|<#>|<@>"
+        },
+        {
+          "name": "keyword.operator.assignment.omnix",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.arithmetic.omnix",
+          "match": "\\+|-|\\*|/|%"
+        },
+        {
+          "name": "keyword.operator.comparison.omnix",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.logical.omnix",
+          "match": "&&|\\|\\||!"
+        },
+        {
+          "name": "keyword.operator.arrow.omnix",
+          "match": "->"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.omnix",
+          "match": "\\b[a-z_][a-zA-Z0-9_]*(?=\\s*\\()"
+        },
+        {
+          "name": "meta.function.definition.omnix",
+          "begin": "\\b(function|service)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.declaration.function.omnix"
+            },
+            "2": {
+              "name": "entity.name.function.omnix"
+            }
+          },
+          "end": "\\)",
+          "patterns": [
+            {
+              "include": "#function-parameters"
+            }
+          ]
+        }
+      ]
+    },
+    "function-parameters": {
+      "patterns": [
+        {
+          "match": "([a-zA-Z_][a-zA-Z0-9_]*)\\s*:\\s*([a-zA-Z_][a-zA-Z0-9_<>,\\s]*)",
+          "captures": {
+            "1": {
+              "name": "variable.parameter.omnix"
+            },
+            "2": {
+              "name": "entity.name.type.omnix"
+            }
+          }
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.omnix",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "constant.language.null.omnix",
+          "match": "\\b(null|nil)\\b"
+        },
+        {
+          "name": "variable.language.omnix",
+          "match": "\\b(self|this)\\b"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.omnix"
+}

@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmnixLang Graph IDE - Visual Pipeline Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f23;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #6B46C1 0%, #3B82F6 100%);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+        
+        .run-btn {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        
+        .run-btn:hover {
+            background: #059669;
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #1a1a2e;
+            border-right: 1px solid #2a2a3e;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .sidebar h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 15px;
+        }
+        
+        .node-palette {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .node-item {
+            background: #2a2a3e;
+            border: 1px solid #3a3a4e;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: move;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .node-item:hover {
+            background: #3a3a4e;
+            transform: translateX(5px);
+        }
+        
+        .node-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        
+        .python-node .node-icon { background: #3776ab; }
+        .js-node .node-icon { background: #f7df1e; color: #333; }
+        .sql-node .node-icon { background: #336791; }
+        .transform-node .node-icon { background: #10b981; }
+        .output-node .node-icon { background: #ef4444; }
+        .input-node .node-icon { background: #8b5cf6; }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: #0a0a1a;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        
+        #canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .properties-panel {
+            width: 300px;
+            background: #1a1a2e;
+            border-left: 1px solid #2a2a3e;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .property-group {
+            margin-bottom: 20px;
+        }
+        
+        .property-group h4 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #a0a0b0;
+        }
+        
+        .property-field {
+            margin-bottom: 15px;
+        }
+        
+        .property-field label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        .property-field input,
+        .property-field select,
+        .property-field textarea {
+            width: 100%;
+            background: #2a2a3e;
+            border: 1px solid #3a3a4e;
+            color: #e0e0e0;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        .property-field textarea {
+            min-height: 100px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+        
+        .status-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border-top: 1px solid #2a2a3e;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .output-console {
+            position: absolute;
+            bottom: 40px;
+            left: 250px;
+            right: 300px;
+            height: 200px;
+            background: #0a0a1a;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px 8px 0 0;
+            display: none;
+            flex-direction: column;
+        }
+        
+        .output-console.visible {
+            display: flex;
+        }
+        
+        .console-header {
+            background: #1a1a2e;
+            padding: 10px;
+            border-bottom: 1px solid #2a2a3e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .console-content {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+        
+        .log-line {
+            margin: 2px 0;
+        }
+        
+        .log-info { color: #3b82f6; }
+        .log-success { color: #10b981; }
+        .log-error { color: #ef4444; }
+        .log-warning { color: #f59e0b; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.visible {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal h2 {
+            margin-bottom: 20px;
+            color: #e0e0e0;
+        }
+        
+        .code-preview {
+            background: #0a0a1a;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            color: #e0e0e0;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .metric-card {
+            background: #2a2a3e;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <h1>🔄 OmnixLang Graph IDE</h1>
+            <span style="opacity: 0.8; font-size: 14px;">Visual Pipeline Builder</span>
+        </div>
+        <div class="controls">
+            <button onclick="savePipeline()">💾 Save</button>
+            <button onclick="loadPipeline()">📁 Load</button>
+            <button onclick="exportCode()">📤 Export</button>
+            <button onclick="showMetrics()">📊 Metrics</button>
+            <button class="run-btn" onclick="runPipeline()">▶ Run Pipeline</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <h3>Node Palette</h3>
+            <div class="node-palette">
+                <div class="node-item input-node" draggable="true" data-type="input">
+                    <div class="node-icon">📥</div>
+                    <div>
+                        <div style="font-weight: 600;">Data Input</div>
+                        <div style="font-size: 11px; opacity: 0.7;">CSV, JSON, API</div>
+                    </div>
+                </div>
+                
+                <div class="node-item python-node" draggable="true" data-type="python">
+                    <div class="node-icon">🐍</div>
+                    <div>
+                        <div style="font-weight: 600;">Python Script</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Custom Python code</div>
+                    </div>
+                </div>
+                
+                <div class="node-item js-node" draggable="true" data-type="javascript">
+                    <div class="node-icon">JS</div>
+                    <div>
+                        <div style="font-weight: 600;">JavaScript</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Node.js runtime</div>
+                    </div>
+                </div>
+                
+                <div class="node-item sql-node" draggable="true" data-type="sql">
+                    <div class="node-icon">📊</div>
+                    <div>
+                        <div style="font-weight: 600;">SQL Query</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Database query</div>
+                    </div>
+                </div>
+                
+                <div class="node-item transform-node" draggable="true" data-type="transform">
+                    <div class="node-icon">⚙️</div>
+                    <div>
+                        <div style="font-weight: 600;">Transform</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Data transformation</div>
+                    </div>
+                </div>
+                
+                <div class="node-item output-node" draggable="true" data-type="output">
+                    <div class="node-icon">📤</div>
+                    <div>
+                        <div style="font-weight: 600;">Data Output</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Save results</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 30px;">Templates</h3>
+            <div class="node-palette">
+                <div class="node-item" onclick="loadTemplate('etl')">
+                    <div class="node-icon" style="background: #0891b2;">📋</div>
+                    <div>
+                        <div style="font-weight: 600;">ETL Pipeline</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Extract-Transform-Load</div>
+                    </div>
+                </div>
+                
+                <div class="node-item" onclick="loadTemplate('ml')">
+                    <div class="node-icon" style="background: #dc2626;">🤖</div>
+                    <div>
+                        <div style="font-weight: 600;">ML Pipeline</div>
+                        <div style="font-size: 11px; opacity: 0.7;">Training workflow</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+            
+            <div class="output-console" id="console">
+                <div class="console-header">
+                    <span>📟 Output Console</span>
+                    <button onclick="toggleConsole()" style="padding: 4px 8px;">✕</button>
+                </div>
+                <div class="console-content" id="console-content"></div>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Ready</span>
+                    <span style="opacity: 0.6;">|</span>
+                    <span id="node-count">0 nodes</span>
+                    <span style="opacity: 0.6;">|</span>
+                    <span id="connection-count">0 connections</span>
+                </div>
+                <div>
+                    <button onclick="toggleConsole()" style="padding: 4px 8px;">Console</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="properties-panel">
+            <h3 style="margin-bottom: 20px;">Properties</h3>
+            <div id="properties-content">
+                <div style="opacity: 0.5; text-align: center; margin-top: 50px;">
+                    Select a node to edit properties
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="metrics-modal">
+        <div class="modal-content">
+            <h2>Pipeline Metrics</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">15</div>
+                    <div class="metric-label">Executions Today</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">98%</div>
+                    <div class="metric-label">Success Rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">2.3s</div>
+                    <div class="metric-label">Avg Duration</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1.2M</div>
+                    <div class="metric-label">Records Processed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">$0.45</div>
+                    <div class="metric-label">Cost Today</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">3</div>
+                    <div class="metric-label">Active Nodes</div>
+                </div>
+            </div>
+            <button onclick="closeMetrics()" style="width: 100%; margin-top: 20px;">Close</button>
+        </div>
+    </div>
+    
+    <div class="modal" id="code-modal">
+        <div class="modal-content">
+            <h2>Generated OmnixLang Code</h2>
+            <div class="code-preview" id="code-preview"></div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="copyCode()" style="flex: 1;">📋 Copy Code</button>
+                <button onclick="closeCodeModal()" style="flex: 1;">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Graph IDE Implementation
+        class GraphIDE {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.nodes = [];
+                this.connections = [];
+                this.selectedNode = null;
+                this.draggingNode = null;
+                this.connectingFrom = null;
+                this.mousePos = { x: 0, y: 0 };
+                
+                this.initCanvas();
+                this.setupEventListeners();
+                this.animate();
+            }
+            
+            initCanvas() {
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+            
+            resizeCanvas() {
+                const container = this.canvas.parentElement;
+                this.canvas.width = container.clientWidth;
+                this.canvas.height = container.clientHeight;
+            }
+            
+            setupEventListeners() {
+                // Drag and drop for palette
+                document.querySelectorAll('.node-item').forEach(item => {
+                    item.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('nodeType', item.dataset.type);
+                    });
+                });
+                
+                this.canvas.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                });
+                
+                this.canvas.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const nodeType = e.dataTransfer.getData('nodeType');
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    this.addNode(nodeType, x, y);
+                });
+                
+                // Canvas interactions
+                this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                this.canvas.addEventListener('dblclick', (e) => this.onDoubleClick(e));
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Delete' && this.selectedNode) {
+                        this.deleteNode(this.selectedNode);
+                    }
+                });
+            }
+            
+            addNode(type, x, y) {
+                const node = {
+                    id: Date.now(),
+                    type: type,
+                    x: x,
+                    y: y,
+                    width: 150,
+                    height: 80,
+                    inputs: type !== 'input' ? 1 : 0,
+                    outputs: type !== 'output' ? 1 : 0,
+                    properties: this.getDefaultProperties(type)
+                };
+                
+                this.nodes.push(node);
+                this.updateNodeCount();
+                this.logToConsole(`Added ${type} node`, 'info');
+            }
+            
+            getDefaultProperties(type) {
+                const defaults = {
+                    input: {
+                        source: 'file',
+                        path: '/data/input.csv',
+                        format: 'csv'
+                    },
+                    python: {
+                        code: '# Python transformation\nimport pandas as pd\n\ndef process(data):\n    return data'
+                    },
+                    javascript: {
+                        code: '// JavaScript transformation\nfunction process(data) {\n    return data;\n}'
+                    },
+                    sql: {
+                        query: 'SELECT * FROM table\nWHERE condition = true\nLIMIT 100'
+                    },
+                    transform: {
+                        operation: 'filter',
+                        config: '{}'
+                    },
+                    output: {
+                        destination: 'file',
+                        path: '/data/output.csv',
+                        format: 'csv'
+                    }
+                };
+                
+                return defaults[type] || {};
+            }
+            
+            deleteNode(node) {
+                const index = this.nodes.indexOf(node);
+                if (index > -1) {
+                    this.nodes.splice(index, 1);
+                    this.connections = this.connections.filter(c => 
+                        c.from !== node && c.to !== node
+                    );
+                    this.selectedNode = null;
+                    this.updateNodeCount();
+                    this.updateConnectionCount();
+                    this.logToConsole(`Deleted ${node.type} node`, 'warning');
+                }
+            }
+            
+            onMouseDown(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Check if clicking on a node
+                const clickedNode = this.getNodeAt(x, y);
+                
+                if (clickedNode) {
+                    this.selectedNode = clickedNode;
+                    this.showNodeProperties(clickedNode);
+                    
+                    // Check if clicking on output port
+                    if (this.isOutputPort(clickedNode, x, y)) {
+                        this.connectingFrom = clickedNode;
+                    } else {
+                        this.draggingNode = clickedNode;
+                        this.dragOffset = {
+                            x: x - clickedNode.x,
+                            y: y - clickedNode.y
+                        };
+                    }
+                } else {
+                    this.selectedNode = null;
+                    this.hideNodeProperties();
+                }
+            }
+            
+            onMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                this.mousePos.x = e.clientX - rect.left;
+                this.mousePos.y = e.clientY - rect.top;
+                
+                if (this.draggingNode) {
+                    this.draggingNode.x = this.mousePos.x - this.dragOffset.x;
+                    this.draggingNode.y = this.mousePos.y - this.dragOffset.y;
+                }
+            }
+            
+            onMouseUp(e) {
+                if (this.connectingFrom) {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const targetNode = this.getNodeAt(x, y);
+                    
+                    if (targetNode && targetNode !== this.connectingFrom && this.isInputPort(targetNode, x, y)) {
+                        this.addConnection(this.connectingFrom, targetNode);
+                    }
+                }
+                
+                this.draggingNode = null;
+                this.connectingFrom = null;
+            }
+            
+            onDoubleClick(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const node = this.getNodeAt(x, y);
+                
+                if (node && (node.type === 'python' || node.type === 'javascript' || node.type === 'sql')) {
+                    this.openCodeEditor(node);
+                }
+            }
+            
+            getNodeAt(x, y) {
+                for (let i = this.nodes.length - 1; i >= 0; i--) {
+                    const node = this.nodes[i];
+                    if (x >= node.x && x <= node.x + node.width &&
+                        y >= node.y && y <= node.y + node.height) {
+                        return node;
+                    }
+                }
+                return null;
+            }
+            
+            isOutputPort(node, x, y) {
+                const portX = node.x + node.width;
+                const portY = node.y + node.height / 2;
+                return Math.abs(x - portX) < 20 && Math.abs(y - portY) < 20;
+            }
+            
+            isInputPort(node, x, y) {
+                const portX = node.x;
+                const portY = node.y + node.height / 2;
+                return Math.abs(x - portX) < 20 && Math.abs(y - portY) < 20;
+            }
+            
+            addConnection(from, to) {
+                // Check if connection already exists
+                const exists = this.connections.some(c => c.from === from && c.to === to);
+                if (!exists) {
+                    this.connections.push({ from, to });
+                    this.updateConnectionCount();
+                    this.logToConsole(`Connected ${from.type} → ${to.type}`, 'success');
+                }
+            }
+            
+            showNodeProperties(node) {
+                const panel = document.getElementById('properties-content');
+                let html = `
+                    <div class="property-group">
+                        <h4>Node Configuration</h4>
+                        <div class="property-field">
+                            <label>Node ID</label>
+                            <input type="text" value="${node.id}" readonly>
+                        </div>
+                        <div class="property-field">
+                            <label>Type</label>
+                            <input type="text" value="${node.type}" readonly>
+                        </div>
+                    </div>
+                `;
+                
+                if (node.type === 'python' || node.type === 'javascript' || node.type === 'sql') {
+                    html += `
+                        <div class="property-group">
+                            <h4>Code</h4>
+                            <div class="property-field">
+                                <textarea id="node-code">${node.properties.code || node.properties.query || ''}</textarea>
+                            </div>
+                            <button onclick="updateNodeCode()" style="width: 100%;">Update Code</button>
+                        </div>
+                    `;
+                }
+                
+                if (node.type === 'input' || node.type === 'output') {
+                    html += `
+                        <div class="property-group">
+                            <h4>Data Configuration</h4>
+                            <div class="property-field">
+                                <label>Path</label>
+                                <input type="text" id="node-path" value="${node.properties.path}">
+                            </div>
+                            <div class="property-field">
+                                <label>Format</label>
+                                <select id="node-format">
+                                    <option value="csv" ${node.properties.format === 'csv' ? 'selected' : ''}>CSV</option>
+                                    <option value="json" ${node.properties.format === 'json' ? 'selected' : ''}>JSON</option>
+                                    <option value="parquet" ${node.properties.format === 'parquet' ? 'selected' : ''}>Parquet</option>
+                                </select>
+                            </div>
+                            <button onclick="updateNodeData()" style="width: 100%;">Update Configuration</button>
+                        </div>
+                    `;
+                }
+                
+                panel.innerHTML = html;
+            }
+            
+            hideNodeProperties() {
+                const panel = document.getElementById('properties-content');
+                panel.innerHTML = `
+                    <div style="opacity: 0.5; text-align: center; margin-top: 50px;">
+                        Select a node to edit properties
+                    </div>
+                `;
+            }
+            
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw connections
+                this.ctx.strokeStyle = '#3b82f6';
+                this.ctx.lineWidth = 2;
+                
+                this.connections.forEach(conn => {
+                    const fromX = conn.from.x + conn.from.width;
+                    const fromY = conn.from.y + conn.from.height / 2;
+                    const toX = conn.to.x;
+                    const toY = conn.to.y + conn.to.height / 2;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(fromX, fromY);
+                    
+                    // Bezier curve for smooth connection
+                    const cp1x = fromX + 50;
+                    const cp1y = fromY;
+                    const cp2x = toX - 50;
+                    const cp2y = toY;
+                    
+                    this.ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, toX, toY);
+                    this.ctx.stroke();
+                    
+                    // Draw arrow
+                    this.drawArrow(toX, toY, Math.atan2(toY - cp2y, toX - cp2x));
+                });
+                
+                // Draw connection being created
+                if (this.connectingFrom) {
+                    this.ctx.strokeStyle = '#10b981';
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(
+                        this.connectingFrom.x + this.connectingFrom.width,
+                        this.connectingFrom.y + this.connectingFrom.height / 2
+                    );
+                    this.ctx.lineTo(this.mousePos.x, this.mousePos.y);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+                }
+                
+                // Draw nodes
+                this.nodes.forEach(node => {
+                    this.drawNode(node);
+                });
+                
+                requestAnimationFrame(() => this.animate());
+            }
+            
+            drawNode(node) {
+                const isSelected = node === this.selectedNode;
+                
+                // Node shadow
+                if (isSelected) {
+                    this.ctx.shadowColor = '#3b82f6';
+                    this.ctx.shadowBlur = 20;
+                }
+                
+                // Node background
+                this.ctx.fillStyle = '#2a2a3e';
+                this.ctx.strokeStyle = isSelected ? '#3b82f6' : '#3a3a4e';
+                this.ctx.lineWidth = isSelected ? 2 : 1;
+                
+                this.roundRect(node.x, node.y, node.width, node.height, 8);
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.shadowBlur = 0;
+                
+                // Node icon
+                const icons = {
+                    input: '📥',
+                    output: '📤',
+                    python: '🐍',
+                    javascript: 'JS',
+                    sql: '📊',
+                    transform: '⚙️'
+                };
+                
+                this.ctx.fillStyle = '#e0e0e0';
+                this.ctx.font = '20px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(icons[node.type], node.x + 30, node.y + 35);
+                
+                // Node title
+                this.ctx.font = '14px Arial';
+                this.ctx.textAlign = 'left';
+                this.ctx.fillText(node.type.charAt(0).toUpperCase() + node.type.slice(1), 
+                    node.x + 50, node.y + 30);
+                
+                // Node status
+                this.ctx.font = '11px Arial';
+                this.ctx.fillStyle = '#888';
+                this.ctx.fillText('Ready', node.x + 50, node.y + 50);
+                
+                // Input port
+                if (node.inputs > 0) {
+                    this.ctx.fillStyle = '#3b82f6';
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x, node.y + node.height / 2, 6, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                
+                // Output port
+                if (node.outputs > 0) {
+                    this.ctx.fillStyle = '#10b981';
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x + node.width, node.y + node.height / 2, 6, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+            
+            roundRect(x, y, width, height, radius) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + radius, y);
+                this.ctx.lineTo(x + width - radius, y);
+                this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                this.ctx.lineTo(x + width, y + height - radius);
+                this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                this.ctx.lineTo(x + radius, y + height);
+                this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                this.ctx.lineTo(x, y + radius);
+                this.ctx.quadraticCurveTo(x, y, x + radius, y);
+                this.ctx.closePath();
+            }
+            
+            drawArrow(x, y, angle) {
+                const headLength = 10;
+                this.ctx.save();
+                this.ctx.translate(x, y);
+                this.ctx.rotate(angle);
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, 0);
+                this.ctx.lineTo(-headLength, -headLength/2);
+                this.ctx.lineTo(-headLength, headLength/2);
+                this.ctx.closePath();
+                this.ctx.fillStyle = '#3b82f6';
+                this.ctx.fill();
+                this.ctx.restore();
+            }
+            
+            updateNodeCount() {
+                document.getElementById('node-count').textContent = `${this.nodes.length} nodes`;
+            }
+            
+            updateConnectionCount() {
+                document.getElementById('connection-count').textContent = `${this.connections.length} connections`;
+            }
+            
+            logToConsole(message, type = 'info') {
+                const console = document.getElementById('console-content');
+                const timestamp = new Date().toLocaleTimeString();
+                const line = document.createElement('div');
+                line.className = `log-line log-${type}`;
+                line.textContent = `[${timestamp}] ${message}`;
+                console.appendChild(line);
+                console.scrollTop = console.scrollHeight;
+            }
+            
+            generateOmnixCode() {
+                let code = `// Generated OmnixLang Pipeline\n\n`;
+                code += `pipeline DataProcessing {\n`;
+                code += `    // Define nodes\n`;
+                
+                this.nodes.forEach(node => {
+                    code += `    node ${node.type}_${node.id} {\n`;
+                    code += `        type: "${node.type}"\n`;
+                    
+                    if (node.type === 'python') {
+                        code += `        runtime: "python3.9"\n`;
+                        code += `        code: """\n${node.properties.code}\n        """\n`;
+                    } else if (node.type === 'javascript') {
+                        code += `        runtime: "node16"\n`;
+                        code += `        code: """\n${node.properties.code}\n        """\n`;
+                    } else if (node.type === 'sql') {
+                        code += `        query: """\n${node.properties.query}\n        """\n`;
+                    }
+                    
+                    code += `    }\n\n`;
+                });
+                
+                code += `    // Define connections\n`;
+                this.connections.forEach(conn => {
+                    code += `    connect ${conn.from.type}_${conn.from.id} -> ${conn.to.type}_${conn.to.id}\n`;
+                });
+                
+                code += `\n    // Execution configuration\n`;
+                code += `    config {\n`;
+                code += `        retries: 3\n`;
+                code += `        timeout: 3600\n`;
+                code += `        parallel: true\n`;
+                code += `    }\n`;
+                code += `}\n`;
+                
+                return code;
+            }
+        }
+        
+        // Initialize Graph IDE
+        const ide = new GraphIDE();
+        
+        // Global functions
+        function toggleConsole() {
+            const console = document.getElementById('console');
+            console.classList.toggle('visible');
+        }
+        
+        function runPipeline() {
+            ide.logToConsole('Starting pipeline execution...', 'info');
+            
+            // Simulate execution
+            setTimeout(() => {
+                ide.logToConsole('Connecting to data sources...', 'info');
+            }, 500);
+            
+            setTimeout(() => {
+                ide.logToConsole('Executing Python node...', 'info');
+            }, 1000);
+            
+            setTimeout(() => {
+                ide.logToConsole('Running SQL query...', 'info');
+            }, 1500);
+            
+            setTimeout(() => {
+                ide.logToConsole('Pipeline completed successfully!', 'success');
+                ide.logToConsole('Processed 1,234,567 records in 2.3 seconds', 'info');
+            }, 2000);
+            
+            document.getElementById('console').classList.add('visible');
+        }
+        
+        function exportCode() {
+            const code = ide.generateOmnixCode();
+            document.getElementById('code-preview').textContent = code;
+            document.getElementById('code-modal').classList.add('visible');
+        }
+        
+        function closeCodeModal() {
+            document.getElementById('code-modal').classList.remove('visible');
+        }
+        
+        function copyCode() {
+            const code = document.getElementById('code-preview').textContent;
+            navigator.clipboard.writeText(code);
+            ide.logToConsole('Code copied to clipboard', 'success');
+        }
+        
+        function showMetrics() {
+            document.getElementById('metrics-modal').classList.add('visible');
+        }
+        
+        function closeMetrics() {
+            document.getElementById('metrics-modal').classList.remove('visible');
+        }
+        
+        function savePipeline() {
+            const pipeline = {
+                nodes: ide.nodes,
+                connections: ide.connections.map(c => ({
+                    fromId: c.from.id,
+                    toId: c.to.id
+                }))
+            };
+            
+            const json = JSON.stringify(pipeline, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pipeline.json';
+            a.click();
+            
+            ide.logToConsole('Pipeline saved', 'success');
+        }
+        
+        function loadPipeline() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const pipeline = JSON.parse(event.target.result);
+                    ide.nodes = pipeline.nodes;
+                    
+                    // Rebuild connections
+                    ide.connections = [];
+                    pipeline.connections.forEach(conn => {
+                        const from = ide.nodes.find(n => n.id === conn.fromId);
+                        const to = ide.nodes.find(n => n.id === conn.toId);
+                        if (from && to) {
+                            ide.connections.push({ from, to });
+                        }
+                    });
+                    
+                    ide.updateNodeCount();
+                    ide.updateConnectionCount();
+                    ide.logToConsole('Pipeline loaded', 'success');
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+        
+        function loadTemplate(type) {
+            ide.nodes = [];
+            ide.connections = [];
+            
+            if (type === 'etl') {
+                // ETL Template
+                const inputNode = {
+                    id: 1,
+                    type: 'input',
+                    x: 100,
+                    y: 200,
+                    width: 150,
+                    height: 80,
+                    inputs: 0,
+                    outputs: 1,
+                    properties: ide.getDefaultProperties('input')
+                };
+                
+                const pythonNode = {
+                    id: 2,
+                    type: 'python',
+                    x: 300,
+                    y: 200,
+                    width: 150,
+                    height: 80,
+                    inputs: 1,
+                    outputs: 1,
+                    properties: {
+                        code: '# Data transformation\nimport pandas as pd\n\ndef process(data):\n    # Clean and transform data\n    df = pd.DataFrame(data)\n    df = df.dropna()\n    df["processed"] = True\n    return df.to_dict("records")'
+                    }
+                };
+                
+                const sqlNode = {
+                    id: 3,
+                    type: 'sql',
+                    x: 500,
+                    y: 200,
+                    width: 150,
+                    height: 80,
+                    inputs: 1,
+                    outputs: 1,
+                    properties: {
+                        query: 'INSERT INTO processed_data\nSELECT * FROM staging\nWHERE processed = true'
+                    }
+                };
+                
+                const outputNode = {
+                    id: 4,
+                    type: 'output',
+                    x: 700,
+                    y: 200,
+                    width: 150,
+                    height: 80,
+                    inputs: 1,
+                    outputs: 0,
+                    properties: ide.getDefaultProperties('output')
+                };
+                
+                ide.nodes = [inputNode, pythonNode, sqlNode, outputNode];
+                ide.connections = [
+                    { from: inputNode, to: pythonNode },
+                    { from: pythonNode, to: sqlNode },
+                    { from: sqlNode, to: outputNode }
+                ];
+                
+                ide.logToConsole('Loaded ETL template', 'success');
+            }
+            
+            ide.updateNodeCount();
+            ide.updateConnectionCount();
+        }
+        
+        function updateNodeCode() {
+            if (ide.selectedNode) {
+                const code = document.getElementById('node-code').value;
+                if (ide.selectedNode.type === 'sql') {
+                    ide.selectedNode.properties.query = code;
+                } else {
+                    ide.selectedNode.properties.code = code;
+                }
+                ide.logToConsole('Node code updated', 'success');
+            }
+        }
+        
+        function updateNodeData() {
+            if (ide.selectedNode) {
+                ide.selectedNode.properties.path = document.getElementById('node-path').value;
+                ide.selectedNode.properties.format = document.getElementById('node-format').value;
+                ide.logToConsole('Node configuration updated', 'success');
+            }
+        }
+        
+        // Welcome message
+        ide.logToConsole('Welcome to OmnixLang Graph IDE!', 'info');
+        ide.logToConsole('Drag nodes from the palette to get started', 'info');
+    </script>
+</body>
+</html>

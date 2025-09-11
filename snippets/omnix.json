@@ -1,0 +1,171 @@
+{
+  "Node Definition": {
+    "prefix": "node",
+    "body": [
+      "@network(port: ${1:8080}, discovery: ${2:mDNS})",
+      "node ${3:NodeName} {",
+      "\t@replicated",
+      "\tstate ${4:counter}: ${5:u64} = ${6:0};",
+      "\t",
+      "\tfunction ${7:update}() {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ],
+    "description": "Create a new distributed node"
+  },
+  "Consensus Cluster": {
+    "prefix": "cluster",
+    "body": [
+      "consensus cluster ${1:ServiceName} {",
+      "\treplicas: ${2:5}",
+      "\tconsensus: ${3:PBFT}",
+      "\tzones: [${4:\"us-east\", \"eu-west\", \"asia-pacific\"}]",
+      "\t",
+      "\tservice ${5:handle_request}(req: ${6:Request}) -> ${7:Response} {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ],
+    "description": "Create a consensus cluster"
+  },
+  "Consensus Proposal": {
+    "prefix": "propose",
+    "body": [
+      "let result = ${1:value} <!> {",
+      "\tvalidators: ${2:3},",
+      "\ttimeout: ${3:2000}ms,",
+      "\talgorithm: Consensus::${4:Raft}",
+      "};",
+      "",
+      "when result.accepted() {",
+      "\t${5:state} <#> result.value;",
+      "\tbroadcast(${6:UpdateEvent}(${5:state}));",
+      "}"
+    ],
+    "description": "Create a consensus proposal"
+  },
+  "Function": {
+    "prefix": "fn",
+    "body": [
+      "function ${1:name}(${2:params}) -> ${3:ReturnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create a function"
+  },
+  "Service": {
+    "prefix": "service",
+    "body": [
+      "service ${1:name}(${2:params}) -> ${3:ReturnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create a service function"
+  },
+  "RPC Function": {
+    "prefix": "rpc",
+    "body": [
+      "@rpc",
+      "function ${1:name}(${2:params}) -> ${3:ReturnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create an RPC function"
+  },
+  "Event Handler": {
+    "prefix": "on",
+    "body": [
+      "on ${1:event_name}(${2:params}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create an event handler"
+  },
+  "State Declaration": {
+    "prefix": "state",
+    "body": [
+      "@${1:replicated}",
+      "state ${2:name}: ${3:type} = ${4:initial_value};"
+    ],
+    "description": "Declare state variable"
+  },
+  "When Block": {
+    "prefix": "when",
+    "body": [
+      "when ${1:condition} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create a when block"
+  },
+  "Phase Block": {
+    "prefix": "phase",
+    "body": [
+      "phase ${1:name} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create a phase block"
+  },
+  "Cross-Chain Contract": {
+    "prefix": "crosschain",
+    "body": [
+      "@cross_chain([${1:\"ethereum\", \"polygon\", \"arbitrum\"}])",
+      "contract ${2:ContractName} {",
+      "\tfunction ${3:transfer}(",
+      "\t\tfrom_chain: ChainId,",
+      "\t\tto_chain: ChainId,",
+      "\t\tamount: TokenAmount",
+      "\t) {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ],
+    "description": "Create a cross-chain smart contract"
+  },
+  "Pipeline": {
+    "prefix": "pipeline",
+    "body": [
+      "pipeline ${1:DataProcessor} {",
+      "\tinput: ${2:KafkaStream}<${3:RawData}>",
+      "\t",
+      "\tstage ${4:preprocess} {",
+      "\t\tparallel workers: ${5:auto_scale(load)}",
+      "\t\tprocess(data) => ${6:clean_and_validate}(data)",
+      "\t}",
+      "\t",
+      "\toutput: ${7:DatabaseSink}<${8:ProcessedData}>",
+      "}"
+    ],
+    "description": "Create a data processing pipeline"
+  },
+  "Broadcast": {
+    "prefix": "broadcast",
+    "body": [
+      "broadcast(${1:EventName}(${2:data}));"
+    ],
+    "description": "Broadcast an event"
+  },
+  "Main Function": {
+    "prefix": "main",
+    "body": [
+      "function main() {",
+      "\tlet ${1:node} = ${2:NodeName}::new();",
+      "\t",
+      "\t// Start the distributed node",
+      "\t${1:node}.start();",
+      "\t",
+      "\t// Join the cluster",
+      "\t${1:node}.join_cluster(\"${3:cluster-name}\");",
+      "\t",
+      "\t// Wait for initial synchronization",
+      "\tawait ${1:node}.synchronized();",
+      "\t",
+      "\tprintln(\"Node {} joined cluster\", ${1:node}.id);",
+      "\t$0",
+      "}"
+    ],
+    "description": "Create main function"
+  }
+}

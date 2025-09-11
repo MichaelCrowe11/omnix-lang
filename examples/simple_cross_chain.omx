@@ -1,0 +1,31 @@
+// Simple Cross-Chain Contract Test
+
+cross_chain(["ethereum", "polygon"]) contract TokenBridge {
+    function transfer(from_chain: String, to_chain: String, amount: u64) {
+        println("Cross-chain transfer initiated");
+        println("From: " + from_chain);
+        println("To: " + to_chain);  
+        println("Amount: " + amount);
+        
+        let lock_result = lock_tokens(from_chain, amount);
+        let mint_result = mint_tokens(to_chain, amount);
+        
+        emit("Transfer", from_chain, to_chain, amount);
+        
+        return amount;
+    }
+}
+
+function main() {
+    println("Deploying cross-chain contract...");
+    
+    let deployment = TokenBridge.deploy();
+    println("Contract deployed!");
+    
+    let result = TokenBridge.transfer("ethereum", "polygon", 1000);
+    println("Transfer result: " + result);
+    
+    return result;
+}
+
+main();

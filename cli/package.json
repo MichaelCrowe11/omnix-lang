@@ -1,0 +1,31 @@
+{
+  "name": "@omnix-lang/cli",
+  "version": "0.2.0",
+  "description": "Command Line Interface for OMNIX Language",
+  "main": "omnix-cli.js",
+  "bin": {
+    "omnix": "./omnix-cli.js"
+  },
+  "scripts": {
+    "test": "node omnix-cli.js help"
+  },
+  "keywords": [
+    "omnix",
+    "cli",
+    "distributed",
+    "blockchain",
+    "consensus",
+    "compiler"
+  ],
+  "author": "OMNIX Team",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omnix-lang/omnix"
+  },
+  "homepage": "https://omnixlang.org",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "preferGlobal": true
+}

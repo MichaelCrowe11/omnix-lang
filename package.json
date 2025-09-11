@@ -1,0 +1,146 @@
+{
+  "name": "omnix-lang",
+  "displayName": "OMNIX Language Support",
+  "description": "Language support for OMNIX - The Distributed Systems Programming Language",
+  "version": "0.2.0",
+  "publisher": "omnix-lang",
+  "author": {
+    "name": "OMNIX Team"
+  },
+  "license": "Apache-2.0",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#7C3AED",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omnix-lang/omnix"
+  },
+  "bugs": {
+    "url": "https://github.com/omnix-lang/omnix/issues"
+  },
+  "homepage": "https://omnixlang.org",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Formatters",
+    "Linters"
+  ],
+  "keywords": [
+    "omnix",
+    "distributed",
+    "consensus",
+    "blockchain",
+    "distributed-systems",
+    "omx"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:omnix"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "omnix",
+        "aliases": [
+          "OMNIX",
+          "omnix",
+          "omx"
+        ],
+        "extensions": [
+          ".omx",
+          ".omnix"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "omnix",
+        "scopeName": "source.omnix",
+        "path": "./syntaxes/omnix.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "omnix",
+        "path": "./snippets/omnix.json"
+      }
+    ],
+    "configuration": {
+      "title": "OMNIX",
+      "properties": {
+        "omnix.enableAutoCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable auto-completion for OMNIX language"
+        },
+        "omnix.enableLinting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable linting for OMNIX files"
+        },
+        "omnix.compilerPath": {
+          "type": "string",
+          "default": "omnix",
+          "description": "Path to the OMNIX compiler executable"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "omnix.compile",
+        "title": "OMNIX: Compile Current File"
+      },
+      {
+        "command": "omnix.run",
+        "title": "OMNIX: Run Current File"
+      },
+      {
+        "command": "omnix.format",
+        "title": "OMNIX: Format Document"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceExtname == .omx",
+          "command": "omnix.compile",
+          "group": "omnix"
+        },
+        {
+          "when": "resourceExtname == .omx",
+          "command": "omnix.run",
+          "group": "omnix"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.3",
+    "@vscode/test-electron": "^2.2.0",
+    "@vscode/vsce": "^2.19.0"
+  }
+}

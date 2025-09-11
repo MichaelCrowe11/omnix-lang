@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- OMNIX Logo - Distributed Network Symbol -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6B46C1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#9333EA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#grad1)" opacity="0.1"/>
+  
+  <!-- Central Node -->
+  <circle cx="64" cy="64" r="12" fill="url(#grad1)"/>
+  
+  <!-- Distributed Nodes -->
+  <!-- Top -->
+  <circle cx="64" cy="24" r="8" fill="url(#grad2)"/>
+  <!-- Top Right -->
+  <circle cx="94" cy="34" r="8" fill="url(#grad2)"/>
+  <!-- Right -->
+  <circle cx="104" cy="64" r="8" fill="url(#grad2)"/>
+  <!-- Bottom Right -->
+  <circle cx="94" cy="94" r="8" fill="url(#grad2)"/>
+  <!-- Bottom -->
+  <circle cx="64" cy="104" r="8" fill="url(#grad2)"/>
+  <!-- Bottom Left -->
+  <circle cx="34" cy="94" r="8" fill="url(#grad2)"/>
+  <!-- Left -->
+  <circle cx="24" cy="64" r="8" fill="url(#grad2)"/>
+  <!-- Top Left -->
+  <circle cx="34" cy="34" r="8" fill="url(#grad2)"/>
+  
+  <!-- Connection Lines -->
+  <g stroke="url(#grad1)" stroke-width="2" fill="none" opacity="0.6">
+    <!-- From center to all nodes -->
+    <line x1="64" y1="64" x2="64" y2="24"/>
+    <line x1="64" y1="64" x2="94" y2="34"/>
+    <line x1="64" y1="64" x2="104" y2="64"/>
+    <line x1="64" y1="64" x2="94" y2="94"/>
+    <line x1="64" y1="64" x2="64" y2="104"/>
+    <line x1="64" y1="64" x2="34" y2="94"/>
+    <line x1="64" y1="64" x2="24" y2="64"/>
+    <line x1="64" y1="64" x2="34" y2="34"/>
+  </g>
+  
+  <!-- Outer connections between nodes -->
+  <g stroke="url(#grad2)" stroke-width="1" fill="none" opacity="0.3">
+    <line x1="64" y1="24" x2="94" y2="34"/>
+    <line x1="94" y1="34" x2="104" y2="64"/>
+    <line x1="104" y1="64" x2="94" y2="94"/>
+    <line x1="94" y1="94" x2="64" y2="104"/>
+    <line x1="64" y1="104" x2="34" y2="94"/>
+    <line x1="34" y1="94" x2="24" y2="64"/>
+    <line x1="24" y1="64" x2="34" y2="34"/>
+    <line x1="34" y1="34" x2="64" y2="24"/>
+  </g>
+  
+  <!-- OMNIX Text (optional - can be removed for icon) -->
+  <text x="64" y="120" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="url(#grad1)" text-anchor="middle">OMNIX</text>
+</svg>

@@ -1,11 +1,43 @@
-# OMNIX Programming Language
-*The Distributed Systems Language*
+# OMNIX Language Support for Visual Studio Code
 
-**Planet-Scale Computing Made Simple.**
+[![Version](https://img.shields.io/visual-studio-marketplace/v/omnix-lang.omnix-lang)](https://marketplace.visualstudio.com/items?itemName=omnix-lang.omnix-lang)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/omnix-lang.omnix-lang)](https://marketplace.visualstudio.com/items?itemName=omnix-lang.omnix-lang)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/omnix-lang.omnix-lang)](https://marketplace.visualstudio.com/items?itemName=omnix-lang.omnix-lang)
 
-OMNIX is built from the ground up for distributed computing, blockchain systems, and planetary-scale applications.
+**OMNIX Programming Language - The Distributed Systems Language**
 
-## 🌐 Key Features
+*Planet-Scale Computing Made Simple.*
+
+This extension provides comprehensive language support for OMNIX, a programming language built from the ground up for distributed computing, blockchain systems, and planetary-scale applications.
+
+## 🎨 Extension Features
+
+### Syntax Highlighting
+- Full syntax highlighting for `.omx` and `.omnix` files
+- Support for consensus operators (`<!>`, `<?>`, `<#>`, `<@>`)
+- Keyword highlighting for distributed constructs
+- String interpolation and escape sequences
+- Annotation/decorator highlighting
+
+### IntelliSense
+- Auto-completion for keywords, types, and consensus algorithms
+- Hover documentation for OMNIX language constructs
+- Signature help for functions and services
+
+### Code Snippets
+- Quick snippets for common patterns:
+  - Node and cluster definitions
+  - Consensus proposals
+  - Event handlers
+  - Cross-chain contracts
+  - Data pipelines
+
+### Editor Commands
+- **Compile**: `OMNIX: Compile Current File`
+- **Run**: `OMNIX: Run Current File`
+- **Format**: `OMNIX: Format Document`
+
+## 🌐 Language Features
 
 - **Native Consensus Protocols**: Built-in blockchain, PBFT, and Raft consensus
 - **Automatic Distribution**: Geographic distribution and load balancing
@@ -73,6 +105,13 @@ pipeline DataProcessor {
 
 ## 📦 Installation
 
+### Extension Installation
+1. Open VS Code
+2. Press `Ctrl+P` / `Cmd+P` to open Quick Open
+3. Type `ext install omnix-lang.omnix-lang`
+4. Press Enter
+
+### Compiler Installation
 ```bash
 # Install OMNIX compiler
 npm install -g @omnix-lang/cli
@@ -163,13 +202,42 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
 
+## ⚙️ Extension Settings
+
+This extension contributes the following settings:
+
+- `omnix.enableAutoCompletion`: Enable/disable auto-completion
+- `omnix.enableLinting`: Enable/disable linting
+- `omnix.compilerPath`: Path to OMNIX compiler executable
+
+## 🔧 Requirements
+
+- Visual Studio Code 1.74.0 or higher
+- OMNIX compiler (optional, for compilation features)
+
+## 🐛 Known Issues
+
+- Compiler integration requires separate OMNIX compiler installation
+- Advanced type checking pending Language Server Protocol implementation
+
+## 📝 Release Notes
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
+
 ## 🔗 Links
 
 - Website: https://omnixlang.org
 - Documentation: https://docs.omnixlang.org
+- GitHub: https://github.com/omnix-lang/omnix
 - Discord: https://discord.gg/omnixlang
 - Twitter: [@omnixlang](https://twitter.com/omnixlang)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see our [Contributing Guide](https://github.com/omnix-lang/omnix/blob/main/CONTRIBUTING.md) for details.
 
 ---
 
 *OMNIX: Connecting the world's computing resources*
+
+**Enjoy coding with OMNIX!**

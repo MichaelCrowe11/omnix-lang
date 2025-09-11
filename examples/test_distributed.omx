@@ -1,0 +1,27 @@
+// Test basic distributed features
+
+function main() {
+    println("Testing distributed OMNIX features...");
+    
+    // Test basic consensus operation
+    let value = 42;
+    let consensus_result = value <!> {
+        validators: 3,
+        timeout: 2000
+    };
+    
+    println("Consensus result:", consensus_result);
+    
+    // Test blockchain verification
+    let chain_verified = "ethereum";
+    let verify_result = chain_verified <@> {
+        chain: "ethereum",
+        timeout: 1000
+    };
+    
+    println("Chain verification:", verify_result);
+    
+    return "Distributed features tested";
+}
+
+main();

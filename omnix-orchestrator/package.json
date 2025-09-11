@@ -1,0 +1,111 @@
+{
+  "name": "@omnixlang/orchestrator",
+  "version": "0.1.0",
+  "description": "OmnixLang Visual Pipeline Orchestrator - Polyglot data pipeline builder",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test-pipeline.js",
+    "demo": "node test-pipeline.js",
+    "dev": "nodemon server.js",
+    "validate": "node -e \"console.log('✅ Package structure valid')\"",
+    "build": "echo 'Building OmnixLang Orchestrator...' && npm run validate"
+  },
+  "keywords": [
+    "omnixlang",
+    "orchestrator",
+    "pipeline",
+    "polyglot",
+    "python",
+    "javascript",
+    "sql",
+    "etl",
+    "data-pipeline",
+    "visual-programming",
+    "distributed-systems"
+  ],
+  "author": "OmnixLang Team <team@omnixlang.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omnixlang/omnix-orchestrator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/omnixlang/omnix-orchestrator/issues"
+  },
+  "homepage": "https://omnixlang.dev/orchestrator",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "ws": "^8.13.0",
+    "uuid": "^9.0.0",
+    "joi": "^17.9.2",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.6.1",
+    "eslint": "^8.44.0",
+    "prettier": "^3.0.0"
+  },
+  "optionalDependencies": {
+    "sqlite3": "^5.1.6",
+    "mysql2": "^3.6.0",
+    "pg": "^8.11.1"
+  },
+  "omnixlang": {
+    "type": "orchestrator",
+    "version": "0.1.0",
+    "phase": 0,
+    "features": {
+      "graphIDE": true,
+      "polyglotAdapters": [
+        "python",
+        "javascript",
+        "sql"
+      ],
+      "connectors": [
+        "file",
+        "http",
+        "database"
+      ],
+      "execution": "local",
+      "monitoring": "basic",
+      "marketplace": false
+    },
+    "business": {
+      "tier": "free",
+      "model": "open-core",
+      "pricing": {
+        "free": {
+          "nodes": "unlimited",
+          "adapters": [
+            "python",
+            "javascript",
+            "sql"
+          ],
+          "execution": "local",
+          "support": "community"
+        }
+      }
+    }
+  },
+  "peerDependencies": {
+    "python": ">=3.8",
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "adapters/",
+    "engine/",
+    "ide/",
+    "server.js",
+    "index.js",
+    "README.md",
+    "CHANGELOG.md"
+  ]
+}

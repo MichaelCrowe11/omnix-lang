@@ -1,0 +1,35 @@
+// Simple OMNIX Pipeline Test
+// Tests the new distributed features
+
+pipeline DataProcessor {
+    input: "kafka://raw-data"
+    
+    stage preprocess {
+        workers: 4
+        parallel: true
+    }
+    
+    stage inference {
+        gpu_workers: 2
+        model: "classifier"
+    }
+    
+    output: "database://results"
+}
+
+function main() {
+    println("Testing OMNIX Pipeline...");
+    
+    let sample_data = [
+        { id: 1, value: 100 },
+        { id: 2, value: 200 },
+        { id: 3, value: 150 }
+    ];
+    
+    let result = DataProcessor.execute(sample_data);
+    println("Pipeline result:", result);
+    
+    return result;
+}
+
+main();

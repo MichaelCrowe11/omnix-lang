@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OMNIX Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .icon-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        canvas {
+            border: 1px solid #ddd;
+            display: block;
+            margin: 10px auto;
+        }
+        button {
+            background: #7C3AED;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #6B46C1;
+        }
+        h3 {
+            color: #333;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>OMNIX Icon Generator</h1>
+    <p>Use this page to generate PNG icons from the SVG logo. Right-click and save each image.</p>
+    
+    <div class="container">
+        <div class="icon-box">
+            <h3>128x128 (Main Icon)</h3>
+            <canvas id="icon128" width="128" height="128"></canvas>
+            <button onclick="downloadIcon('icon128', 'omnix-icon-128.png')">Download</button>
+        </div>
+        
+        <div class="icon-box">
+            <h3>256x256 (High Res)</h3>
+            <canvas id="icon256" width="256" height="256"></canvas>
+            <button onclick="downloadIcon('icon256', 'omnix-icon-256.png')">Download</button>
+        </div>
+        
+        <div class="icon-box">
+            <h3>512x512 (Banner)</h3>
+            <canvas id="icon512" width="512" height="512"></canvas>
+            <button onclick="downloadIcon('icon512', 'omnix-icon-512.png')">Download</button>
+        </div>
+    </div>
+
+    <script>
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const scale = size / 128;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Create gradients
+            const grad1 = ctx.createLinearGradient(0, 0, size, size);
+            grad1.addColorStop(0, '#6B46C1');
+            grad1.addColorStop(0.5, '#9333EA');
+            grad1.addColorStop(1, '#7C3AED');
+            
+            const grad2 = ctx.createLinearGradient(0, 0, size, size);
+            grad2.addColorStop(0, '#3B82F6');
+            grad2.addColorStop(1, '#1E40AF');
+            
+            // Background circle
+            ctx.globalAlpha = 0.1;
+            ctx.fillStyle = grad1;
+            ctx.beginPath();
+            ctx.arc(64 * scale, 64 * scale, 60 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            
+            // Draw connections first (behind nodes)
+            ctx.strokeStyle = grad1;
+            ctx.lineWidth = 2 * scale;
+            ctx.globalAlpha = 0.6;
+            
+            // Center to all nodes
+            const nodes = [
+                [64, 24], [94, 34], [104, 64], [94, 94],
+                [64, 104], [34, 94], [24, 64], [34, 34]
+            ];
+            
+            nodes.forEach(node => {
+                ctx.beginPath();
+                ctx.moveTo(64 * scale, 64 * scale);
+                ctx.lineTo(node[0] * scale, node[1] * scale);
+                ctx.stroke();
+            });
+            
+            // Outer connections
+            ctx.strokeStyle = grad2;
+            ctx.lineWidth = 1 * scale;
+            ctx.globalAlpha = 0.3;
+            
+            for (let i = 0; i < nodes.length; i++) {
+                const next = (i + 1) % nodes.length;
+                ctx.beginPath();
+                ctx.moveTo(nodes[i][0] * scale, nodes[i][1] * scale);
+                ctx.lineTo(nodes[next][0] * scale, nodes[next][1] * scale);
+                ctx.stroke();
+            }
+            
+            ctx.globalAlpha = 1;
+            
+            // Central node
+            ctx.fillStyle = grad1;
+            ctx.beginPath();
+            ctx.arc(64 * scale, 64 * scale, 12 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Distributed nodes
+            ctx.fillStyle = grad2;
+            nodes.forEach(node => {
+                ctx.beginPath();
+                ctx.arc(node[0] * scale, node[1] * scale, 8 * scale, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // OMNIX text (only for larger sizes)
+            if (size >= 256) {
+                ctx.fillStyle = grad1;
+                ctx.font = `bold ${10 * scale}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText('OMNIX', 64 * scale, 120 * scale);
+            }
+        }
+        
+        function downloadIcon(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Draw all icons on load
+        window.onload = function() {
+            drawIcon('icon128', 128);
+            drawIcon('icon256', 256);
+            drawIcon('icon512', 512);
+        };
+    </script>
+</body>
+</html>

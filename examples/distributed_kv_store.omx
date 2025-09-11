@@ -1,0 +1,263 @@
+// Distributed Key-Value Store with OMNIX
+// Demonstrates: Consensus, replication, sharding, and fault tolerance
+
+@network(port: 8080, discovery: mDNS)
+@byzantine(f: 1, n: 4)  // Tolerates 1 Byzantine fault with 4 nodes
+consensus cluster KVStore {
+    replicas: 7
+    consensus: PBFT
+    zones: ["us-east", "us-west", "eu-central", "asia-pacific"]
+    
+    // Replicated state with automatic sharding
+    @replicated
+    @sharded(key: hash)
+    state store: Map<String, Bytes> = Map::new();
+    
+    @replicated
+    state version: Map<String, u64> = Map::new();
+    
+    // Write operation with consensus
+    service put(key: String, value: Bytes) -> Result<(), Error> {
+        // Create proposal for state change
+        let proposal = {
+            op: "put",
+            key: key,
+            value: value,
+            timestamp: now()
+        };
+        
+        // Submit to consensus with Byzantine fault tolerance
+        let result = proposal <!> {
+            validators: 5,
+            timeout: 3000ms,
+            algorithm: Consensus::PBFT,
+            quorum: 0.67  // 2/3 + 1 for Byzantine
+        };
+        
+        when result.accepted() {
+            // Apply change with version tracking
+            let current_version = version.get(key).unwrap_or(0);
+            store <#> Map::insert(key, value);
+            version <#> Map::insert(key, current_version + 1);
+            
+            // Broadcast update to all replicas
+            broadcast(KVUpdate {
+                key: key,
+                value: value,
+                version: current_version + 1,
+                node: self.id
+            });
+            
+            return Ok(());
+        }
+        
+        return Err(Error::ConsensusFailure);
+    }
+    
+    // Read operation with quorum
+    @rpc
+    function get(key: String) -> Option<Bytes> {
+        // Read from quorum of replicas for consistency
+        let responses = query_replicas(key) <@> {
+            nodes: 3,
+            timeout: 1000ms,
+            consistency: Quorum
+        };
+        
+        // Return most recent version
+        let latest = responses
+            .max_by_key(|r| r.version)
+            .map(|r| r.value);
+            
+        return latest;
+    }
+    
+    // Batch operations for efficiency
+    service batch_put(entries: Vec<(String, Bytes)>) -> Result<u64, Error> {
+        let batch_proposal = {
+            op: "batch_put",
+            entries: entries,
+            timestamp: now()
+        };
+        
+        let result = batch_proposal <!> {
+            validators: 5,
+            timeout: 5000ms,
+            algorithm: Consensus::PBFT
+        };
+        
+        when result.accepted() {
+            let mut count = 0;
+            for (key, value) in entries {
+                store <#> Map::insert(key, value);
+                count += 1;
+            }
+            
+            broadcast(BatchUpdate {
+                count: count,
+                node: self.id
+            });
+            
+            return Ok(count);
+        }
+        
+        return Err(Error::ConsensusFailure);
+    }
+    
+    // Delete with tombstone pattern
+    service delete(key: String) -> Result<bool, Error> {
+        let proposal = {
+            op: "delete",
+            key: key,
+            timestamp: now()
+        };
+        
+        let result = proposal <!> {
+            validators: 5,
+            timeout: 3000ms
+        };
+        
+        when result.accepted() {
+            let existed = store.contains_key(key);
+            store <#> Map::remove(key);
+            version <#> Map::remove(key);
+            
+            broadcast(KVDelete {
+                key: key,
+                node: self.id
+            });
+            
+            return Ok(existed);
+        }
+        
+        return Err(Error::ConsensusFailure);
+    }
+    
+    // Range query with pagination
+    @rpc
+    function range(start: String, end: String, limit: u64) -> Vec<(String, Bytes)> {
+        return store
+            .range(start..end)
+            .take(limit)
+            .collect();
+    }
+    
+    // Handle network partitions
+    on partition_detected {
+        phase minority_partition {
+            // Enter read-only mode
+            enter_read_only_mode();
+            
+            // Try to rejoin majority
+            loop {
+                if can_reach_quorum() {
+                    break;
+                }
+                sleep(5000ms);
+            }
+        }
+        
+        phase majority_partition {
+            // Continue operations with reduced replicas
+            adjust_quorum_size();
+            
+            // Mark minority nodes as unreachable
+            update_membership();
+        }
+    }
+    
+    // Handle node failures
+    on node_failure(failed_node: NodeId) {
+        // Redistribute data from failed node
+        let shards = get_shards_for_node(failed_node);
+        
+        for shard in shards {
+            let new_owner = select_new_owner(shard);
+            
+            migrate_shard <!> {
+                from: failed_node,
+                to: new_owner,
+                shard: shard,
+                validators: 3
+            };
+        }
+        
+        // Update cluster topology
+        broadcast(NodeFailure {
+            node: failed_node,
+            timestamp: now()
+        });
+    }
+    
+    // Periodic anti-entropy repair
+    on timer(interval: 60000ms) {
+        phase anti_entropy {
+            // Compare state with random peer
+            let peer = select_random_peer();
+            let diff = compute_merkle_diff(peer);
+            
+            for key in diff {
+                let local_version = version.get(key).unwrap_or(0);
+                let peer_version = peer.get_version(key);
+                
+                if peer_version > local_version {
+                    // Pull newer version from peer
+                    let value = peer.get(key);
+                    store <#> Map::insert(key, value);
+                    version <#> Map::insert(key, peer_version);
+                }
+            }
+        }
+    }
+}
+
+// Client library
+function create_client(endpoints: Vec<String>) -> KVStoreClient {
+    let client = KVStoreClient::new();
+    
+    for endpoint in endpoints {
+        client.add_endpoint(endpoint);
+    }
+    
+    client.connect();
+    return client;
+}
+
+// Example usage
+function main() {
+    // Start a KVStore node
+    let node = KVStore::new();
+    node.start();
+    node.join_cluster("kv-cluster");
+    
+    // Wait for cluster formation
+    await node.wait_for_quorum();
+    
+    println("KVStore node {} started", node.id);
+    println("Cluster size: {}", node.cluster_size());
+    
+    // Example operations
+    let client = create_client(vec!["localhost:8080"]);
+    
+    // Put some data
+    client.put("user:1", serialize({name: "Alice", age: 30}));
+    client.put("user:2", serialize({name: "Bob", age: 25}));
+    
+    // Get data
+    let user1 = client.get("user:1");
+    println("User 1: {:?}", deserialize(user1));
+    
+    // Batch operation
+    let batch = vec![
+        ("config:timeout", serialize(5000)),
+        ("config:replicas", serialize(3)),
+        ("config:mode", serialize("production"))
+    ];
+    client.batch_put(batch);
+    
+    // Range query
+    let configs = client.range("config:", "config:~", 10);
+    for (key, value) in configs {
+        println("{}: {}", key, deserialize(value));
+    }
+}
